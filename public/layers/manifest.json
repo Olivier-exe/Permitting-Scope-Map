@@ -1,0 +1,472 @@
+{
+  "companies": {
+    "entergy_la": {
+      "name": "Entergy Louisiana",
+      "short": "ENT-LA",
+      "center": [
+        31.0,
+        -92.0
+      ],
+      "zoom": 7,
+      "layers": {
+        "dot": {
+          "file": "entergy_la_dot.json",
+          "label": "DOT Roads",
+          "type": "line",
+          "color": {
+            "I": "#60a5fa",
+            "U": "#fbbf24",
+            "S": "#4ade80"
+          },
+          "colorKey": "t",
+          "weight": {
+            "I": 4,
+            "U": 3,
+            "S": 2
+          },
+          "dash": {
+            "S": "6 4"
+          },
+          "nameKey": "n"
+        },
+        "rr": {
+          "file": "entergy_la_rr.json",
+          "label": "Railroads",
+          "type": "line",
+          "color": "#f87171",
+          "weight": 3,
+          "dash": "4 6",
+          "nameKey": "o"
+        },
+        "levee": {
+          "file": "levee_systems.json",
+          "label": "Levees",
+          "type": "line",
+          "color": "#fb923c",
+          "weight": 3,
+          "dash": "3 5",
+          "nameKey": "n"
+        },
+        "transmission": {
+          "file": "entergy_la_transmission.json",
+          "label": "Transmission",
+          "type": "line",
+          "color": "#c084fc",
+          "weight": 2.5,
+          "dash": "8 4",
+          "nameKey": "n"
+        },
+        "faa": {
+          "file": "entergy_la_faa.json",
+          "label": "FAA Airports",
+          "type": "point",
+          "color": "#22d3ee",
+          "icon": "airport",
+          "nameKey": "n"
+        },
+        "cities": {
+          "file": "entergy_la_cities.json",
+          "label": "Cities",
+          "type": "polygon",
+          "color": "#a78bfa",
+          "fill": 0.06,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "parishes": {
+          "file": "entergy_la_parishes.json",
+          "label": "Parishes",
+          "type": "polygon",
+          "color": "#94a3b8",
+          "fill": 0,
+          "weight": 2.5,
+          "dash": "6 3",
+          "nameKey": "n"
+        },
+        "row": {
+          "file": "entergy_la_row.json",
+          "label": "ROW Agents",
+          "type": "polygon",
+          "color": "#f472b6",
+          "fill": 0.08,
+          "weight": 2.5,
+          "nameKey": "n"
+        },
+        "parish_roads": {
+          "file": "entergy_la_parish_roads.json",
+          "label": "Parish Roads",
+          "type": "line",
+          "color": "#a8a29e",
+          "weight": 1.5,
+          "minZoom": 11,
+          "nameKey": "n"
+        }
+      },
+      "lookup": "entergy_la_lookup.json"
+    },
+    "entergy_tx": {
+      "name": "Entergy Texas",
+      "short": "ENT-TX",
+      "center": [
+        30.5,
+        -94.5
+      ],
+      "zoom": 8,
+      "layers": {
+        "dot": {
+          "file": "entergy_tx_dot.json",
+          "label": "DOT Roads",
+          "type": "line",
+          "color": {
+            "I": "#60a5fa",
+            "U": "#fbbf24",
+            "S": "#4ade80"
+          },
+          "colorKey": "t",
+          "weight": {
+            "I": 4,
+            "U": 3,
+            "S": 2
+          },
+          "dash": {
+            "S": "6 4"
+          },
+          "nameKey": "n"
+        },
+        "rr": {
+          "file": "entergy_tx_rr.json",
+          "label": "Railroads",
+          "type": "line",
+          "color": "#f87171",
+          "weight": 3,
+          "dash": "4 6",
+          "nameKey": "o"
+        },
+        "transmission": {
+          "file": "entergy_tx_transmission.json",
+          "label": "Transmission",
+          "type": "line",
+          "color": "#c084fc",
+          "weight": 2.5,
+          "dash": "8 4",
+          "nameKey": "n"
+        },
+        "faa": {
+          "file": "entergy_tx_faa.json",
+          "label": "FAA Airports",
+          "type": "point",
+          "color": "#22d3ee",
+          "icon": "airport",
+          "nameKey": "n"
+        },
+        "cities": {
+          "file": "entergy_tx_cities.json",
+          "label": "Cities",
+          "type": "polygon",
+          "color": "#a78bfa",
+          "fill": 0.06,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "counties": {
+          "file": "entergy_tx_counties.json",
+          "label": "Counties",
+          "type": "polygon",
+          "color": "#94a3b8",
+          "fill": 0,
+          "weight": 2.5,
+          "dash": "6 3",
+          "nameKey": "n"
+        },
+        "levee": {
+          "file": "levee_systems.json",
+          "label": "Levees",
+          "type": "line",
+          "color": "#fb923c",
+          "weight": 3,
+          "dash": "3 5",
+          "nameKey": "n"
+        }
+      },
+      "lookup": "entergy_tx_lookup.json"
+    },
+    "exel_nm": {
+      "name": "Exel New Mexico",
+      "short": "EXL-NM",
+      "center": [
+        34.5,
+        -106.0
+      ],
+      "zoom": 7,
+      "layers": {
+        "dot": {
+          "file": "exel_nm_dot.json",
+          "label": "DOT Roads",
+          "type": "line",
+          "color": {
+            "I": "#60a5fa",
+            "U": "#fbbf24",
+            "S": "#4ade80"
+          },
+          "colorKey": "t",
+          "weight": {
+            "I": 4,
+            "U": 3,
+            "S": 2
+          },
+          "dash": {
+            "S": "6 4"
+          },
+          "nameKey": "n"
+        },
+        "rr": {
+          "file": "exel_nm_rr.json",
+          "label": "Railroads",
+          "type": "line",
+          "color": "#f87171",
+          "weight": 3,
+          "dash": "4 6",
+          "nameKey": "o"
+        },
+        "faa": {
+          "file": "exel_nm_faa.json",
+          "label": "FAA Airports",
+          "type": "point",
+          "color": "#22d3ee",
+          "icon": "airport",
+          "nameKey": "n"
+        },
+        "cities": {
+          "file": "exel_nm_cities.json",
+          "label": "Cities",
+          "type": "polygon",
+          "color": "#a78bfa",
+          "fill": 0.06,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "counties": {
+          "file": "exel_nm_counties.json",
+          "label": "Counties",
+          "type": "polygon",
+          "color": "#94a3b8",
+          "fill": 0,
+          "weight": 2.5,
+          "dash": "6 3",
+          "nameKey": "n"
+        },
+        "boundary": {
+          "file": "exel_nm_boundary.json",
+          "label": "State Boundary",
+          "type": "polygon",
+          "color": "#e2e8f0",
+          "fill": 0,
+          "weight": 3,
+          "nameKey": "n"
+        },
+        "levee": {
+          "file": "levee_systems.json",
+          "label": "Levees",
+          "type": "line",
+          "color": "#fb923c",
+          "weight": 3,
+          "dash": "3 5",
+          "nameKey": "n"
+        }
+      },
+      "lookup": "exel_nm_lookup.json"
+    },
+    "exel_tx": {
+      "name": "Exel Texas",
+      "short": "EXL-TX",
+      "center": [
+        31.5,
+        -99.5
+      ],
+      "zoom": 6,
+      "layers": {
+        "dot": {
+          "file": "exel_tx_dot.json",
+          "label": "DOT Roads",
+          "type": "line",
+          "color": {
+            "I": "#60a5fa",
+            "U": "#fbbf24",
+            "S": "#4ade80"
+          },
+          "colorKey": "t",
+          "weight": {
+            "I": 4,
+            "U": 3,
+            "S": 2
+          },
+          "dash": {
+            "S": "6 4"
+          },
+          "nameKey": "n"
+        },
+        "rr": {
+          "file": "exel_tx_rr.json",
+          "label": "Railroads",
+          "type": "line",
+          "color": "#f87171",
+          "weight": 3,
+          "dash": "4 6",
+          "nameKey": "o"
+        },
+        "cities": {
+          "file": "exel_tx_cities.json",
+          "label": "Cities",
+          "type": "polygon",
+          "color": "#a78bfa",
+          "fill": 0.06,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "counties": {
+          "file": "exel_tx_counties.json",
+          "label": "Counties",
+          "type": "polygon",
+          "color": "#94a3b8",
+          "fill": 0,
+          "weight": 2.5,
+          "dash": "6 3",
+          "nameKey": "n"
+        },
+        "levee": {
+          "file": "levee_systems.json",
+          "label": "Levees",
+          "type": "line",
+          "color": "#fb923c",
+          "weight": 3,
+          "dash": "3 5",
+          "nameKey": "n"
+        }
+      },
+      "lookup": "exel_tx_lookup.json"
+    },
+    "colorado": {
+      "name": "Colorado",
+      "short": "CO",
+      "center": [
+        39.0,
+        -105.5
+      ],
+      "zoom": 7,
+      "layers": {
+        "blm": {
+          "file": "co_federal_blm.json",
+          "label": "BLM Lands",
+          "type": "polygon",
+          "color": "#fbbf24",
+          "fill": 0.15,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "usfs": {
+          "file": "co_federal_usfs.json",
+          "label": "National Forests",
+          "type": "polygon",
+          "color": "#22c55e",
+          "fill": 0.12,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "nps": {
+          "file": "co_federal_nps.json",
+          "label": "National Parks",
+          "type": "polygon",
+          "color": "#a855f7",
+          "fill": 0.15,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "usfws": {
+          "file": "co_federal_usfws.json",
+          "label": "Fish & Wildlife",
+          "type": "polygon",
+          "color": "#06b6d4",
+          "fill": 0.15,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "dod": {
+          "file": "co_federal_dod.json",
+          "label": "DOD / Military",
+          "type": "polygon",
+          "color": "#ef4444",
+          "fill": 0.2,
+          "weight": 2.5,
+          "nameKey": "n"
+        },
+        "usbr": {
+          "file": "co_federal_usbr.json",
+          "label": "Bureau of Reclamation",
+          "type": "polygon",
+          "color": "#3b82f6",
+          "fill": 0.15,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "levee": {
+          "file": "levee_systems.json",
+          "label": "Levees",
+          "type": "line",
+          "color": "#fb923c",
+          "weight": 3,
+          "dash": "3 5",
+          "nameKey": "n"
+        },
+        "dot": {
+          "file": "co_dot.json",
+          "label": "DOT Roads",
+          "type": "line",
+          "color": {
+            "I": "#60a5fa",
+            "U": "#fbbf24",
+            "S": "#4ade80"
+          },
+          "colorKey": "t",
+          "weight": {
+            "I": 4,
+            "U": 3,
+            "S": 2
+          },
+          "dash": {
+            "S": "6 4"
+          },
+          "nameKey": "n"
+        },
+        "rr": {
+          "file": "co_rr.json",
+          "label": "Railroads",
+          "type": "line",
+          "color": "#f87171",
+          "weight": 3,
+          "dash": "4 6",
+          "nameKey": "o"
+        },
+        "cities": {
+          "file": "co_cities.json",
+          "label": "Cities",
+          "type": "polygon",
+          "color": "#a78bfa",
+          "fill": 0.06,
+          "weight": 2,
+          "nameKey": "n"
+        },
+        "counties": {
+          "file": "co_counties.json",
+          "label": "Counties",
+          "type": "polygon",
+          "color": "#94a3b8",
+          "fill": 0,
+          "weight": 2.5,
+          "dash": "6 3",
+          "nameKey": "n"
+        }
+      },
+      "lookup": "co_lookup.json"
+    }
+  }
+}

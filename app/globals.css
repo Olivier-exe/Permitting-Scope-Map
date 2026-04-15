@@ -1,0 +1,52 @@
+:root {
+  --bg: #0f0f0f;
+  --panel: #161616;
+  --card: #1e1e1e;
+  --card2: #262626;
+  --border: #2a2a2a;
+  --border2: #363636;
+  --text: #e4e4e4;
+  --text2: #a0a0a0;
+  --text3: #666;
+  --green: #10b981;
+  --green2: #059669;
+  --blue: #3b82f6;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --font: 'Outfit', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+/* Leaflet tooltip override */
+.ltip {
+  background: var(--card) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border2) !important;
+  font-family: var(--font) !important;
+  font-size: 11px !important;
+  padding: 3px 8px !important;
+  border-radius: 5px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,.5) !important;
+}
+.ltip::before {
+  border-top-color: var(--border2) !important;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
