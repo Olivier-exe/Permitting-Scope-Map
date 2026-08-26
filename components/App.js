@@ -247,7 +247,7 @@ export default function App(){
         var d0=has.info.dot[0];var cpp=d0.cp;
         var dl=L.polyline([[pt.lat,pt.lng],[cpp[0],cpp[1]]],{color:'#4a9eff',weight:2,dashArray:'4 4',opacity:0.9,interactive:false}).addTo(m);
         var dft=Math.round(d0.d*3.28084);var dstr=dft>5280?((dft/5280).toFixed(2)+' mi'):(dft+' ft');
-        var dlbl=L.marker([(pt.lat+cpp[0])/2,(pt.lng+cpp[1])/2],{icon:L.divIcon({className:'',html:'<div style="background:rgba(0,0,0,0.9);color:#4a9eff;padding:4px 10px;border-radius:5px;font-size:11px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(74,158,255,0.35)">'+dstr+' '+(d0.dir||'')+' \u00b7 '+d0.n+' centerline</div>',iconAnchor:[80,-8]}),interactive:false}).addTo(m);
+        var dlbl=L.marker([(pt.lat+cpp[0])/2,(pt.lng+cpp[1])/2],{icon:L.divIcon({className:'',html:'<div style="background:rgba(0,0,0,0.9);color:#4a9eff;padding:4px 10px;border-radius:5px;font-size:11px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(74,158,255,0.35)">'+dstr+' '+(d0.dir||'')+' \u00b7 '+d0.n+' centerline'+(d0.w?' \u00b7 ~'+Math.max(0,Math.round(d0.d*3.28084-d0.w/2))+'ft EOP est.':'')+'</div>',iconAnchor:[80,-8]}),interactive:false}).addTo(m);
         pinMeasureLinesRef.current.push(dl);pinMeasureLinesRef.current.push(dlbl);
       }
     });
@@ -466,7 +466,7 @@ export default function App(){
                     {sel.info.faa.length>0&&<Badge label="FAA" value={(sel.info.faa[0].dist/1609.34).toFixed(1)+'mi'} color="#06b6d4"/>}
                   </div>
                 </>:tab==='nearby'?<>
-                  <DetailBox title={sel.info.dot.length?'DOT Roads ('+sel.info.dot.length+')':'DOT Roads \u2014 Clear'} color="#4a9eff">{sel.info.dot.map(function(h,i){return <NearbyRow key={i} label={h.n+' ('+h.t+')'+(h.mp?' \u00b7 MP '+h.mp:'')} dist={h.d} dir={h.dir}/>;})}{!sel.info.dot.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 1,640ft</div>}</DetailBox>
+                  <DetailBox title={sel.info.dot.length?'DOT Roads ('+sel.info.dot.length+')':'DOT Roads \u2014 Clear'} color="#4a9eff">{sel.info.dot.map(function(h,i){return <NearbyRow key={i} label={h.n+' ('+h.t+')'+(h.mp?' \u00b7 MP '+h.mp:'')+(h.w?' \u00b7 ~EOP '+Math.max(0,Math.round(h.d*3.28084-h.w/2))+'ft':'')} dist={h.d} dir={h.dir}/>;})}{!sel.info.dot.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 1,640ft</div>}</DetailBox>
                   <DetailBox title={sel.info.rr.length?'Railroads ('+sel.info.rr.length+')':'Railroads \u2014 Clear'} color="var(--danger)">{sel.info.rr.map(function(r,i){return <NearbyRow key={i} label={r.o} dist={r.d} dir={r.dir}/>;})}{!sel.info.rr.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
                   {sel.info.rrx&&sel.info.rrx.length>0&&<DetailBox title={'RR Crossings ('+sel.info.rrx.length+')'} color="#fb7185">{sel.info.rrx.map(function(x,i){return <NearbyRow key={i} label={x.n} dist={x.dist} dir={x.brg}/>;})}</DetailBox>}
                   <DetailBox title={sel.info.transmission.length?'Transmission ('+sel.info.transmission.length+')':'Transmission \u2014 Clear'} color="#a855f7">{sel.info.transmission.map(function(t,i){return <NearbyRow key={i} label={(t.n||'Line')+(t.v?' ('+t.v+')':'')} dist={t.d} dir={t.dir}/>;})}{!sel.info.transmission.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
