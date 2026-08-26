@@ -243,6 +243,13 @@ export default function App(){
         else{setSelId(pt.id);setSelIds([]);}
       });
       mk.bindTooltip(pt.name,{permanent:false,direction:'top',offset:[0,-12],className:'ltip'});markersRef.current.push(mk);
+      if(isSel&&has&&has.info&&has.info.dot&&has.info.dot.length&&has.info.dot[0].cp){
+        var d0=has.info.dot[0];var cpp=d0.cp;
+        var dl=L.polyline([[pt.lat,pt.lng],[cpp[0],cpp[1]]],{color:'#4a9eff',weight:2,dashArray:'4 4',opacity:0.9,interactive:false}).addTo(m);
+        var dft=Math.round(d0.d*3.28084);var dstr=dft>5280?((dft/5280).toFixed(2)+' mi'):(dft+' ft');
+        var dlbl=L.marker([(pt.lat+cpp[0])/2,(pt.lng+cpp[1])/2],{icon:L.divIcon({className:'',html:'<div style="background:rgba(0,0,0,0.9);color:#4a9eff;padding:4px 10px;border-radius:5px;font-size:11px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(74,158,255,0.35)">'+dstr+' '+(d0.dir||'')+' \u00b7 '+d0.n+' centerline</div>',iconAnchor:[80,-8]}),interactive:false}).addTo(m);
+        pinMeasureLinesRef.current.push(dl);pinMeasureLinesRef.current.push(dlbl);
+      }
     });
     if(selIds.length>=2){
       var selPts=selIds.map(function(id){return pts.find(function(p){return p.id===id;});}).filter(Boolean);
