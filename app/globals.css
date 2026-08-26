@@ -1,13 +1,13 @@
 :root {
   /* Glass design system */
-  --bg: #0a0a0c;
-  --surface: #12121a;
+  --bg: #1c1c21;
+  --surface: #2a2a31;
   --glass: rgba(255,255,255,0.04);
-  --glass-border: rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.14);
   --accent: #e8434f;
   --accent2: #b8323c;
-  --text: #eae6df;
-  --muted: #706b63;
+  --text: #f2efe9;
+  --muted: #a9a49c;
   --success: #00d4aa;
   --danger: #ff4d6a;
   --warn: #e6a23c;
@@ -18,11 +18,11 @@
   --mono: Consolas, 'Courier New', monospace;
   /* Legacy aliases (older style refs resolve to glass values) */
   --panel: var(--surface);
-  --card: rgba(255,255,255,0.05);
-  --card2: rgba(255,255,255,0.08);
+  --card: rgba(255,255,255,0.07);
+  --card2: rgba(255,255,255,0.11);
   --border: var(--glass-border);
-  --border2: rgba(255,255,255,0.14);
-  --text2: #b8b4ac;
+  --border2: rgba(255,255,255,0.22);
+  --text2: #d2cec7;
   --text3: var(--muted);
   --green: var(--success);
   --green2: #00b894;
