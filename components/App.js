@@ -11,6 +11,10 @@ var PIN_COLORS = {
   issue: {bg:'#ff4d6a',label:'Issue'},
 };
 
+var REGIONS={entergy_la:{minLat:28.5,maxLat:33.2,minLng:-94.1,maxLng:-88.7},entergy_tx:{minLat:29.0,maxLat:31.5,minLng:-96.0,maxLng:-93.5},exel_nm:{minLat:31.3,maxLat:37.0,minLng:-109.1,maxLng:-103.0},exel_tx:{minLat:25.8,maxLat:36.5,minLng:-106.7,maxLng:-93.5},colorado:{minLat:36.9,maxLat:41.1,minLng:-109.1,maxLng:-102.0},florida:{minLat:24.5,maxLat:31.0,minLng:-87.6,maxLng:-80.0}};
+var REGION_ORDER=['florida','colorado','entergy_la','entergy_tx','exel_nm','exel_tx'];
+function detectRaw(lat,lng){for(var i=0;i<REGION_ORDER.length;i++){var b=REGIONS[REGION_ORDER[i]];if(lat>=b.minLat&&lat<=b.maxLat&&lng>=b.minLng&&lng<=b.maxLng)return REGION_ORDER[i];}return null;}
+
 var BASEMAPS = {
   dark: {url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'OpenStreetMap',label:'Dark',maxZoom:21,maxNativeZoom:19,className:'dark-tiles'},
   hybrid: {url:'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',attr:'Google',label:'Hybrid',maxZoom:21},
@@ -57,6 +61,7 @@ export default function App(){
   var [leftWidth,setLeftWidth]=useState(340);
   var [rightWidth,setRightWidth]=useState(380);
   var [sideTab,setSideTab]=useState('locations');
+  var [multiWarn,setMultiWarn]=useState(null);
   var nextId=useRef(1);
   var mapRef=useRef(null);
   var mapInst=useRef(null);
@@ -72,6 +77,7 @@ export default function App(){
   var projFileRef=useRef(null);
   var pinMeasureLinesRef=useRef([]);
   var resizingRef=useRef(null);
+  var multiDismissRef=useRef('');
 
   // Auto-save session
   useEffect(function(){
@@ -307,7 +313,22 @@ export default function App(){
 
   var loadProject=useCallback(function(file){var reader=new FileReader();reader.onload=function(e){try{var proj=JSON.parse(e.target.result);if(proj.pts){nextId.current=1;proj.pts.forEach(function(p){if(p.id>=nextId.current)nextId.current=p.id+1;});setPts(proj.pts);}if(proj.res)setRes(proj.res);if(proj.company)setCompany(proj.company);}catch(ex){setErr('Invalid project file');}};reader.readAsText(file);},[]);
 
-  var detectCompany=useCallback(function(lat,lng){if(!manifest)return company;var regions={entergy_la:{minLat:28.5,maxLat:33.2,minLng:-94.1,maxLng:-88.7},entergy_tx:{minLat:29.0,maxLat:31.5,minLng:-96.0,maxLng:-93.5},exel_nm:{minLat:31.3,maxLat:37.0,minLng:-109.1,maxLng:-103.0},exel_tx:{minLat:25.8,maxLat:36.5,minLng:-106.7,maxLng:-93.5},colorado:{minLat:36.9,maxLat:41.1,minLng:-109.1,maxLng:-102.0},florida:{minLat:24.5,maxLat:31.0,minLng:-87.6,maxLng:-80.0}};var order=['florida','colorado','entergy_la','entergy_tx','exel_nm','exel_tx'];for(var i=0;i<order.length;i++){var k=order[i],b=regions[k];if(manifest.companies[k]&&lat>=b.minLat&&lat<=b.maxLat&&lng>=b.minLng&&lng<=b.maxLng)return k;}return company;},[manifest,company]);
+  var detectCompany=useCallback(function(lat,lng){if(!manifest)return company;var k=detectRaw(lat,lng);return (k&&manifest.companies[k])?k:company;},[manifest,company]);
+
+  // Auto-switch company based on pin locations; warn on multi-territory
+  useEffect(function(){
+    if(!manifest||!pts.length){setMultiWarn(null);multiDismissRef.current='';return;}
+    var found={};
+    pts.forEach(function(p){var k=detectRaw(p.lat,p.lng);if(k&&manifest.companies[k])found[k]=(found[k]||0)+1;});
+    var keys=Object.keys(found);
+    if(keys.length===1){
+      setMultiWarn(null);multiDismissRef.current='';
+      if(keys[0]!==company){setCompany(keys[0]);setStatusMsg('Switched to '+manifest.companies[keys[0]].short+' (pin locations)');setTimeout(function(){setStatusMsg('');},2500);}
+    }else if(keys.length>1){
+      var sig=keys.sort().join(',');
+      if(multiDismissRef.current!==sig)setMultiWarn({list:keys,counts:found});
+    }else{setMultiWarn(null);}
+  },[pts,manifest,company]);
 
   var analyzeAll=useCallback(async function(){
     if(!pts.length||!company||!manifest)return;setBusy(true);var newRes={};
@@ -512,6 +533,12 @@ export default function App(){
         {pinMode&&<div style={{position:'absolute',top:12,left:12,zIndex:1000,background:'rgba(18,18,26,0.85)',backdropFilter:'blur(20px)',border:'1px solid var(--glass-border)',borderRadius:10,padding:'8px 14px',fontSize:12,color:'var(--text)',display:'flex',alignItems:'center',gap:6}}><span style={{width:8,height:8,borderRadius:'50%',background:'var(--accent)',animation:'pulse 1.5s infinite'}}/> Click to drop pin &mdash; Esc to cancel</div>}
         {measureMode&&<div style={{position:'absolute',top:12,left:12,zIndex:1000,background:'rgba(74,158,255,0.92)',borderRadius:10,padding:'8px 14px',fontSize:12,color:'#fff',display:'flex',alignItems:'center',gap:6}}><span style={{width:8,height:8,borderRadius:'50%',background:'#fff',animation:'pulse 1.5s infinite'}}/> Click map or pins to measure &mdash; Esc to stop ({measurePts.length} pts)</div>}
         {areaMode&&<div style={{position:'absolute',top:12,left:12,zIndex:1000,background:'rgba(168,85,247,0.92)',borderRadius:10,padding:'8px 14px',fontSize:12,color:'#fff',display:'flex',alignItems:'center',gap:6}}><span style={{width:8,height:8,borderRadius:'50%',background:'#fff',animation:'pulse 1.5s infinite'}}/> Click to draw area &mdash; Esc to stop ({areaPts.length} pts)</div>}
+        {multiWarn&&<div style={{position:'absolute',top:12,left:'50%',transform:'translateX(-50%)',zIndex:1001,background:'rgba(18,18,26,0.92)',backdropFilter:'blur(20px)',border:'1px solid var(--warn)',borderRadius:11,padding:'8px 13px',display:'flex',alignItems:'center',gap:7,flexWrap:'wrap',maxWidth:'85%'}}>
+          <span style={{fontSize:11,color:'var(--warn)',fontWeight:700}}>&#9888; Pins span {multiWarn.list.length} territories</span>
+          <span style={{fontSize:10,color:'var(--muted)'}}>&mdash; analysis handles each pin automatically; pick which layers to view:</span>
+          {multiWarn.list.map(function(k){return <button key={k} onClick={function(){setCompany(k);}} style={{fontSize:10,padding:'3px 9px',borderRadius:7,cursor:'pointer',fontFamily:'var(--font)',fontWeight:700,border:company===k?'1px solid var(--warn)':'1px solid var(--glass-border)',background:company===k?'rgba(230,162,60,0.15)':'rgba(255,255,255,0.05)',color:company===k?'var(--warn)':'var(--text)'}}>{manifest.companies[k].short} ({multiWarn.counts[k]})</button>;})}
+          <button onClick={function(){multiDismissRef.current=multiWarn.list.slice().sort().join(',');setMultiWarn(null);}} style={{fontSize:13,background:'none',border:'none',color:'var(--muted)',cursor:'pointer',padding:'0 2px'}}>&#215;</button>
+        </div>}
         {pts.length>0&&<div style={{position:'absolute',bottom:18,left:'50%',transform:'translateX(-50%)',display:'flex',gap:8,zIndex:1000,width:'min(420px,70%)'}}>
           <button style={{flex:1,padding:'11px 0',background:busy?'rgba(18,18,26,0.85)':'linear-gradient(135deg,var(--accent),var(--accent2))',color:busy?'var(--muted)':'#fff',border:busy?'1px solid var(--glass-border)':'none',borderRadius:11,fontSize:13,fontWeight:700,fontFamily:'var(--font)',cursor:busy?'default':'pointer',boxShadow:busy?'none':'0 6px 24px rgba(232,67,79,.35)',backdropFilter:'blur(20px)'}} disabled={busy} onClick={analyzeAll}>{busy?statusMsg||'Analyzing...':'Analyze '+pts.length+' Location'+(pts.length>1?'s':'')}</button>
           <button style={{padding:'11px 15px',background:'rgba(18,18,26,0.85)',backdropFilter:'blur(20px)',color:'var(--muted)',border:'1px solid var(--glass-border)',borderRadius:11,fontSize:11,fontFamily:'var(--font)',cursor:'pointer'}} onClick={function(){setPts([]);setRes({});setSelId(null);setSelIds([]);nextId.current=1;try{localStorage.removeItem('psm_session');}catch(e){}}}>Clear</button>
