@@ -63,3 +63,8 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+
+/* Keyless dark basemap: filtered OSM tiles */
+.dark-tiles {
+  filter: brightness(0.6) invert(1) contrast(3.2) hue-rotate(200deg) saturate(0.25) brightness(0.75);
+}

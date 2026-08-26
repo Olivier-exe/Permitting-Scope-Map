@@ -12,7 +12,7 @@ var PIN_COLORS = {
 };
 
 var BASEMAPS = {
-  dark: {url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',attr:'CartoDB',label:'Dark',maxZoom:20},
+  dark: {url:'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',attr:'OpenStreetMap',label:'Dark',maxZoom:21,maxNativeZoom:19,className:'dark-tiles'},
   hybrid: {url:'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',attr:'Google',label:'Hybrid',maxZoom:21},
   satellite: {url:'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',attr:'Google',label:'Satellite',maxZoom:21},
   esri: {url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',attr:'ESRI',label:'ESRI',maxZoom:19},
@@ -120,7 +120,7 @@ export default function App(){
     if(mapInst.current||!mapRef.current)return;
     var m=L.map(mapRef.current,{zoomControl:false,preferCanvas:true,minZoom:4,maxZoom:21}).setView([31,-92],7);
     L.control.zoom({position:'topright'}).addTo(m);
-    tileRef.current=L.tileLayer(BASEMAPS.dark.url,{attribution:BASEMAPS.dark.attr,maxZoom:21}).addTo(m);
+    tileRef.current=L.tileLayer(BASEMAPS.dark.url,{attribution:BASEMAPS.dark.attr,maxZoom:21,maxNativeZoom:BASEMAPS.dark.maxNativeZoom,className:BASEMAPS.dark.className||''}).addTo(m);
     m.on('contextmenu',function(e){e.originalEvent.preventDefault();
       if(m._measureMode){setMeasurePts(function(p){return p.concat([[e.latlng.lat,e.latlng.lng]]);});return;}
       if(m._areaMode){setAreaPts(function(p){return p.concat([[e.latlng.lat,e.latlng.lng]]);});return;}
@@ -137,7 +137,7 @@ export default function App(){
     mapInst.current=m;return function(){m.remove();mapInst.current=null;};
   },[]);
 
-  useEffect(function(){if(!mapInst.current||!tileRef.current)return;mapInst.current.removeLayer(tileRef.current);var bm=BASEMAPS[basemap];tileRef.current=L.tileLayer(bm.url,{attribution:bm.attr,maxZoom:bm.maxZoom||21}).addTo(mapInst.current);},[basemap]);
+  useEffect(function(){if(!mapInst.current||!tileRef.current)return;mapInst.current.removeLayer(tileRef.current);var bm=BASEMAPS[basemap];tileRef.current=L.tileLayer(bm.url,{attribution:bm.attr,maxZoom:bm.maxZoom||21,maxNativeZoom:bm.maxNativeZoom,className:bm.className||''}).addTo(mapInst.current);},[basemap]);
   useEffect(function(){if(!mapInst.current||!manifest||!company)return;var co=manifest.companies[company];if(co)mapInst.current.setView(co.center,co.zoom);},[company,manifest]);
   useEffect(function(){if(mapInst.current){mapInst.current._pinMode=pinMode;mapInst.current._measureMode=measureMode;mapInst.current._areaMode=areaMode;}},[pinMode,measureMode,areaMode]);
   useEffect(function(){var h=function(e){if(e.key==='Escape'){setPinMode(false);setMeasureMode(false);setMeasurePts([]);setAreaMode(false);setAreaPts([]);setSelIds([]);}};document.addEventListener('keydown',h);return function(){document.removeEventListener('keydown',h);};},[]);
