@@ -583,6 +583,15 @@
           "weight": 3,
           "dash": "4 6",
           "nameKey": "o"
+        },
+        "cities": {
+          "file": "fl_cities.json",
+          "label": "Cities",
+          "type": "polygon",
+          "color": "#a78bfa",
+          "fill": 0.06,
+          "weight": 2,
+          "nameKey": "n"
         }
       }
     }
