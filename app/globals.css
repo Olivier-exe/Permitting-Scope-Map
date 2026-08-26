@@ -1,0 +1,65 @@
+:root {
+  /* Glass design system */
+  --bg: #0a0a0c;
+  --surface: #12121a;
+  --glass: rgba(255,255,255,0.04);
+  --glass-border: rgba(255,255,255,0.08);
+  --accent: #e8434f;
+  --accent2: #b8323c;
+  --text: #eae6df;
+  --muted: #706b63;
+  --success: #00d4aa;
+  --danger: #ff4d6a;
+  --warn: #e6a23c;
+  --blue: #4a9eff;
+  --purple: #a855f7;
+  --radius: 12px;
+  --font: 'Segoe UI', Arial, sans-serif;
+  --mono: Consolas, 'Courier New', monospace;
+  /* Legacy aliases (older style refs resolve to glass values) */
+  --panel: var(--surface);
+  --card: rgba(255,255,255,0.05);
+  --card2: rgba(255,255,255,0.08);
+  --border: var(--glass-border);
+  --border2: rgba(255,255,255,0.14);
+  --text2: #b8b4ac;
+  --text3: var(--muted);
+  --green: var(--success);
+  --green2: #00b894;
+  --red: var(--danger);
+  --amber: var(--warn);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* Leaflet tooltip — glass */
+.ltip {
+  background: rgba(18,18,26,0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--glass-border) !important;
+  font-family: var(--font) !important;
+  font-size: 11px !important;
+  padding: 4px 9px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.55) !important;
+}
+.ltip::before { border-top-color: rgba(255,255,255,0.14) !important; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
