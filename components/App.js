@@ -270,7 +270,14 @@ export default function App(){
   var removePoint=useCallback(function(id){setPts(function(p){return p.filter(function(x){return x.id!==id;});});setRes(function(p){var n=Object.assign({},p);delete n[id];return n;});if(selId===id)setSelId(null);setSelIds(function(p){return p.filter(function(x){return x!==id;});});},[selId]);
   var updatePoint=useCallback(function(id,updates){setPts(function(p){return p.map(function(pt){return pt.id===id?Object.assign({},pt,updates):pt;});});},[]);
 
-  var handleSearch=useCallback(function(){if(!searchText.trim()||!mapInst.current)return;fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(searchText)+'&limit=1').then(function(r){return r.json();}).then(function(data){if(data&&data.length){var r=data[0];var lat=parseFloat(r.lat),lng=parseFloat(r.lon);setPts(function(p){return p.concat([{id:nextId.current++,lat:lat,lng:lng,name:searchText,color:'review',notes:''}]);});mapInst.current.setView([lat,lng],13);setSearchText('');setErr('');}else{setErr('Location not found');}}).catch(function(){setErr('Search failed');});},[searchText]);
+  var handleSearch=useCallback(function(){if(!searchText.trim()||!mapInst.current)return;
+    var cm=searchText.trim().match(/^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/);
+    if(cm){var cla=parseFloat(cm[1]),cln=parseFloat(cm[2]);
+      if(cla>=-90&&cla<=90&&cln>=-180&&cln<=180){
+        setPts(function(p){return p.concat([{id:nextId.current++,lat:cla,lng:cln,name:cla.toFixed(5)+', '+cln.toFixed(5),color:'review',notes:''}]);});
+        mapInst.current.setView([cla,cln],15);setSearchText('');setErr('');return;}
+      setErr('Coordinates out of range');return;}
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(searchText)+'&limit=1').then(function(r){return r.json();}).then(function(data){if(data&&data.length){var r=data[0];var lat=parseFloat(r.lat),lng=parseFloat(r.lon);setPts(function(p){return p.concat([{id:nextId.current++,lat:lat,lng:lng,name:searchText,color:'review',notes:''}]);});mapInst.current.setView([lat,lng],13);setSearchText('');setErr('');}else{setErr('Location not found');}}).catch(function(){setErr('Search failed');});},[searchText]);
 
   var exportCSV=useCallback(function(){if(!pts.length)return;var lines=['name,latitude,longitude,color,notes,address,city,county,state,nearest_dot,nearest_rr,elevation_ft'];pts.forEach(function(pt){var r=res[pt.id];var info=r?r.info:null;lines.push([pt.name,pt.lat,pt.lng,pt.color||'',pt.notes||'',info?info.address||'':'',info?info.city||'':'',info?info.county||'':'',info?info.state||'':'',info&&info.dot.length?info.dot[0].n+' ('+info.dot[0].d+'m)':'',info&&info.rr.length?info.rr[0].o+' ('+info.rr[0].d+'m)':'',info&&info.elevation?info.elevation.ft.toFixed(1):''].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(','));});var blob=new Blob([lines.join('\n')],{type:'text/csv'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='scope_analysis.csv';a.click();URL.revokeObjectURL(url);},[pts,res]);
 
