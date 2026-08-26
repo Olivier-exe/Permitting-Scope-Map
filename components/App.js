@@ -204,7 +204,7 @@ export default function App(){
           var da=typeof cfg.dash==='object'?(cfg.dash[seg[cfg.colorKey]]||null):(cfg.dash||null);
           var line=L.polyline(ll,{color:clr,weight:wt,opacity:0.9*opacity,dashArray:da});
           var hitLine=L.polyline(ll,{color:clr,weight:Math.max(wt*3,12),opacity:0,interactive:true});
-          var nm=seg[cfg.nameKey]||seg.n||seg.o||'';
+          var nm=seg[cfg.nameKey]||seg.n||seg.o||'';if(cfg.mpKey&&seg[cfg.mpKey])nm=nm+' \u00b7 MP '+seg[cfg.mpKey];
           if(nm){hitLine.bindTooltip(nm,{sticky:true,className:'ltip'});line.bindTooltip(nm,{sticky:true,className:'ltip'});}
           hitLine.on('mouseover',function(){line.setStyle({weight:wt+3,opacity:1});});
           hitLine.on('mouseout',function(){line.setStyle({weight:wt,opacity:0.9*opacity});});
@@ -452,7 +452,7 @@ export default function App(){
                     {sel.info.faa.length>0&&<Badge label="FAA" value={(sel.info.faa[0].dist/1609.34).toFixed(1)+'mi'} color="#06b6d4"/>}
                   </div>
                 </>:tab==='nearby'?<>
-                  <DetailBox title={sel.info.dot.length?'DOT Roads ('+sel.info.dot.length+')':'DOT Roads \u2014 Clear'} color="#4a9eff">{sel.info.dot.map(function(h,i){return <NearbyRow key={i} label={h.n+' ('+h.t+')'} dist={h.d}/>;})}{!sel.info.dot.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 1,640ft</div>}</DetailBox>
+                  <DetailBox title={sel.info.dot.length?'DOT Roads ('+sel.info.dot.length+')':'DOT Roads \u2014 Clear'} color="#4a9eff">{sel.info.dot.map(function(h,i){return <NearbyRow key={i} label={h.n+' ('+h.t+')'+(h.mp?' \u00b7 MP '+h.mp:'')} dist={h.d}/>;})}{!sel.info.dot.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 1,640ft</div>}</DetailBox>
                   <DetailBox title={sel.info.rr.length?'Railroads ('+sel.info.rr.length+')':'Railroads \u2014 Clear'} color="var(--danger)">{sel.info.rr.map(function(r,i){return <NearbyRow key={i} label={r.o} dist={r.d}/>;})}{!sel.info.rr.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
                   <DetailBox title={sel.info.transmission.length?'Transmission ('+sel.info.transmission.length+')':'Transmission \u2014 Clear'} color="#a855f7">{sel.info.transmission.map(function(t,i){return <NearbyRow key={i} label={(t.n||'Line')+(t.v?' ('+t.v+')':'')} dist={t.d}/>;})}{!sel.info.transmission.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
                   <DetailBox title={sel.info.levee.length?'Levees ('+sel.info.levee.length+')':'Levees \u2014 Clear'} color="var(--warn)">{sel.info.levee.map(function(l,i){return <NearbyRow key={i} label={l.n+(l.s?' ['+l.s+']':'')} dist={l.d}/>;})}{!sel.info.levee.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
