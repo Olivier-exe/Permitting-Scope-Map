@@ -592,6 +592,13 @@
           "fill": 0.06,
           "weight": 2,
           "nameKey": "n"
+        },
+        "rr_crossings": {
+          "file": "fl_rr_crossings.json",
+          "label": "RR Crossings",
+          "type": "point",
+          "color": "#fb7185",
+          "minZoom": 9
         }
       }
     }
