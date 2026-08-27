@@ -46,7 +46,6 @@ export default function App(){
   var [res,setRes]=useState({});
   var [busy,setBusy]=useState(false);
   var [statusMsg,setStatusMsg]=useState('');
-  var [tab,setTab]=useState('info');
   var [pinMode,setPinMode]=useState(false);
   var [measureMode,setMeasureMode]=useState(false);
   var [measurePts,setMeasurePts]=useState([]);
@@ -283,6 +282,28 @@ export default function App(){
   var removePoint=useCallback(function(id){setPts(function(p){return p.filter(function(x){return x.id!==id;});});setRes(function(p){var n=Object.assign({},p);delete n[id];return n;});if(selId===id)setSelId(null);setSelIds(function(p){return p.filter(function(x){return x!==id;});});},[selId]);
   var updatePoint=useCallback(function(id,updates){setPts(function(p){return p.map(function(pt){return pt.id===id?Object.assign({},pt,updates):pt;});});},[]);
 
+  // Cycle through analyzed points (Results navigator); flies map to the pin
+  var cyclePoint=useCallback(function(dir){
+    var list=pts.filter(function(p){return res[p.id];});
+    if(!list.length)return;
+    var idx=list.findIndex(function(p){return p.id===selId;});
+    var next=idx<0?(dir>0?0:list.length-1):(idx+dir+list.length)%list.length;
+    var pt=list[next];setSelId(pt.id);setSelIds([]);
+    if(mapInst.current){var m=mapInst.current;var z=m.getZoom();m.flyTo([pt.lat,pt.lng],z>=14?z:14,{duration:0.6});}
+  },[pts,res,selId]);
+
+  // Arrow keys cycle points while the Results tab is open (ignored while typing)
+  useEffect(function(){
+    var h=function(e){
+      if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
+      if(sideTab!=='results')return;
+      var t=document.activeElement?document.activeElement.tagName:'';
+      if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT')return;
+      e.preventDefault();cyclePoint(e.key==='ArrowRight'?1:-1);
+    };
+    document.addEventListener('keydown',h);return function(){document.removeEventListener('keydown',h);};
+  },[cyclePoint,sideTab]);
+
   var handleSearch=useCallback(function(){if(!searchText.trim()||!mapInst.current)return;
     var cm=searchText.trim().match(/^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/);
     if(cm){var cla=parseFloat(cm[1]),cln=parseFloat(cm[2]);
@@ -361,6 +382,10 @@ export default function App(){
        header (brand) > company pills + basemap pills > search >
        tab bar [LAYERS | LOCATIONS | RESULTS] > scrolling tab body >
        footer (tools row + import/export row)
+     - RESULTS tab (per Olivier, 2026-08-27): sticky point navigator
+       (prev/next + "N of M", arrow keys, flies map to pin) over ONE
+       unified scroll: Location > Summary > Permits > Nearby >
+       Status > Notes. NO sub-tabs.
      - NO top bar. NO bottom status bar.
      - Map fills remaining space. Floating: mode hints (top-left),
        analyze pill (bottom-center), status chip (bottom-right).
@@ -369,6 +394,7 @@ export default function App(){
   var PILL=function(on){return{fontSize:10,padding:'4px 10px',borderRadius:7,cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,border:'1px solid '+(on?'transparent':'var(--glass-border)'),background:on?'linear-gradient(135deg,var(--accent),var(--accent2))':'rgba(255,255,255,0.04)',color:on?'#fff':'var(--muted)'};};
   var BMPILL=function(on){return{fontSize:10,padding:'4px 9px',borderRadius:7,cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,border:'1px solid '+(on?'var(--accent)':'var(--glass-border)'),background:on?'rgba(232,67,79,0.12)':'rgba(255,255,255,0.04)',color:on?'var(--accent)':'var(--muted)'};};
   var FBTN={fontSize:10,padding:'5px 10px',borderRadius:7,cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.04)',color:'var(--muted)'};
+  var NAVBTN={width:28,height:28,borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.04)',color:'var(--muted)',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'var(--font)',flexShrink:0,lineHeight:1,padding:0};
 
   return (
     <div style={{height:'100vh',display:'flex',overflow:'hidden'}}>
@@ -459,11 +485,21 @@ export default function App(){
           {/* ---- RESULTS TAB ---- */}
           {sideTab==='results'&&<div>
             {sel&&sel.info&&selPt?<div>
-              <div style={{display:'flex',borderBottom:'1px solid var(--glass-border)'}}>
-                {['info','nearby','permits'].map(function(t){return <button key={t} onClick={function(){setTab(t);}} style={{flex:1,padding:'8px 0',fontSize:10,fontWeight:700,fontFamily:'var(--font)',textTransform:'uppercase',letterSpacing:0.5,background:'transparent',border:'none',borderBottom:tab===t?'2px solid var(--accent)':'2px solid transparent',color:tab===t?'var(--text)':'var(--muted)',cursor:'pointer'}}>{t==='info'?'Location':t==='nearby'?'Nearby':'Permits'}</button>;})}
-              </div>
+              {/* Point navigator */}
+              {(function(){var list=pts.filter(function(p){return res[p.id];});var idx=list.findIndex(function(p){return p.id===selPt.id;});var pc=(PIN_COLORS[selPt.color]||PIN_COLORS.review);var pmN=sel.pm?sel.pm.length:0;
+              return <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderBottom:'1px solid var(--glass-border)',position:'sticky',top:0,background:'var(--surface)',zIndex:5}}>
+                <button onClick={function(){cyclePoint(-1);}} title="Previous point (\u2190)" style={NAVBTN}>&#8249;</button>
+                <div style={{flex:1,minWidth:0,textAlign:'center'}}>
+                  <div style={{fontSize:12,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',gap:6,overflow:'hidden'}}>
+                    <span style={{width:8,height:8,borderRadius:'50%',background:pc.bg,flexShrink:0,boxShadow:'0 0 6px '+pc.bg+'66'}}/>
+                    <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{selPt.name}</span>
+                  </div>
+                  <div style={{fontSize:9,color:'var(--muted)',fontFamily:'var(--mono)',marginTop:1}}>{(idx+1)+' of '+list.length+' \u00b7 '+pmN+' permit'+(pmN===1?'':'s')}</div>
+                </div>
+                <button onClick={function(){cyclePoint(1);}} title="Next point (\u2192)" style={NAVBTN}>&#8250;</button>
+              </div>;})()}
               <div style={{padding:'12px 14px'}}>
-                {tab==='info'?<>
+
                   <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid var(--glass-border)',borderRadius:10,padding:12,marginBottom:10}}>
                     <input value={selPt.name} onChange={function(e){updatePoint(selPt.id,{name:e.target.value});}} style={{fontWeight:700,fontSize:14,marginBottom:8,background:'transparent',border:'none',borderBottom:'1px solid var(--glass-border)',color:'var(--text)',width:'100%',outline:'none',fontFamily:'var(--font)',padding:'2px 0'}}/>
                     {sel.info.address&&<div style={{fontSize:11,color:'var(--text)',opacity:0.85,marginBottom:8,padding:'6px 8px',background:'rgba(255,255,255,0.05)',borderRadius:6,lineHeight:1.4}}>
@@ -472,12 +508,7 @@ export default function App(){
                     {[['Coords',selPt.lat.toFixed(5)+', '+selPt.lng.toFixed(5),'var(--text)'],['State',sel.info.state||'\u2014','var(--text)'],[sel.info.state==='Louisiana'?'Parish':'County',sel.info.county||'\u2014','#4a9eff'],['City',sel.info.city||'Unincorporated','var(--success)']].concat(sel.info.dot&&sel.info.dot.length&&sel.info.dot[0].district?[['FDOT District',sel.info.dot[0].district,'var(--warn)']]:[]).concat(sel.info.row?[['ROW',sel.info.row,'#f472b6']]:[]).concat(sel.info.elevation?[['Elev',sel.info.elevation.ft.toFixed(1)+' ft','#06b6d4']]:[])
                     .map(function(r,i){return <div key={i} style={{fontSize:11,padding:'3px 0',display:'flex',justifyContent:'space-between'}}><span style={{color:'var(--muted)'}}>{r[0]}</span><span style={{fontWeight:600,fontFamily:'var(--mono)',color:r[2],fontSize:11}}>{r[1]}</span></div>;})}
                   </div>
-                  <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Status</div>
-                  <div style={{display:'flex',gap:3,marginBottom:10,flexWrap:'wrap'}}>
-                    {Object.entries(PIN_COLORS).map(function(e){var k=e[0],c=e[1];var isS=selPt.color===k;return <button key={k} onClick={function(){updatePoint(selPt.id,{color:k});}} style={{fontSize:10,padding:'3px 9px',borderRadius:11,cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,display:'flex',alignItems:'center',gap:3,border:isS?'2px solid '+c.bg:'1px solid var(--glass-border)',background:isS?c.bg+'44':'transparent',color:isS?'#fff':'var(--muted)'}}><span style={{width:6,height:6,borderRadius:'50%',background:c.bg}}/>{c.label}</button>;})}
-                  </div>
-                  <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Notes</div>
-                  <textarea value={selPt.notes||''} onChange={function(e){updatePoint(selPt.id,{notes:e.target.value});}} placeholder="Add notes..." style={{width:'100%',minHeight:50,padding:9,borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.05)',color:'var(--text)',fontSize:11,fontFamily:'var(--font)',outline:'none',resize:'vertical'}}/>
+                  {(sel.info.dot.length>0||sel.info.rr.length>0||sel.info.transmission.length>0||sel.info.levee.length>0||sel.info.faa.length>0)&&<>
                   <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,margin:'10px 0 5px'}}>Summary</div>
                   <div style={{display:'flex',flexWrap:'wrap'}}>
                     {sel.info.dot.length>0&&<Badge label="DOT" value={sel.info.dot[0].n+' '+Math.round(sel.info.dot[0].d*3.28084)+'ft'} color="#4a9eff"/>}
@@ -486,17 +517,23 @@ export default function App(){
                     {sel.info.levee.length>0&&<Badge label="Levee" value={Math.round(sel.info.levee[0].d*3.28084)+'ft'} color="var(--warn)"/>}
                     {sel.info.faa.length>0&&<Badge label="FAA" value={(sel.info.faa[0].dist/1609.34).toFixed(1)+'mi'} color="#06b6d4"/>}
                   </div>
-                </>:tab==='nearby'?<>
+                  </>}
+                  <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,margin:'10px 0 5px'}}>{'Permits ('+(sel.pm?sel.pm.length:0)+')'}</div>
+                  {sel.pm&&sel.pm.length>0?sel.pm.map(function(p,i){return <PermitCard key={i} p={p}/>;}):
+                  <div style={{fontSize:12,color:'var(--muted)',textAlign:'center',padding:14}}>No permits flagged</div>}
+                  <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,margin:'10px 0 5px'}}>Nearby Features</div>
                   <DetailBox title={sel.info.dot.length?'DOT Roads ('+sel.info.dot.length+')':'DOT Roads \u2014 Clear'} color="#4a9eff">{sel.info.dot.map(function(h,i){return <NearbyRow key={i} label={h.n+' ('+h.t+')'+(h.mp?' \u00b7 MP '+h.mp:'')+(h.w?' \u00b7 ~EOP '+Math.max(0,Math.round(h.d*3.28084-h.w/2))+'ft':'')} dist={h.d} dir={h.dir}/>;})}{!sel.info.dot.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 1,640ft</div>}</DetailBox>
                   <DetailBox title={sel.info.rr.length?'Railroads ('+sel.info.rr.length+')':'Railroads \u2014 Clear'} color="var(--danger)">{sel.info.rr.map(function(r,i){return <NearbyRow key={i} label={r.o} dist={r.d} dir={r.dir}/>;})}{!sel.info.rr.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
                   {sel.info.rrx&&sel.info.rrx.length>0&&<DetailBox title={'RR Crossings ('+sel.info.rrx.length+')'} color="#fb7185">{sel.info.rrx.map(function(x,i){return <NearbyRow key={i} label={x.n} dist={x.dist} dir={x.brg}/>;})}</DetailBox>}
                   <DetailBox title={sel.info.transmission.length?'Transmission ('+sel.info.transmission.length+')':'Transmission \u2014 Clear'} color="#a855f7">{sel.info.transmission.map(function(t,i){return <NearbyRow key={i} label={(t.n||'Line')+(t.v?' ('+t.v+')':'')} dist={t.d} dir={t.dir}/>;})}{!sel.info.transmission.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
                   <DetailBox title={sel.info.levee.length?'Levees ('+sel.info.levee.length+')':'Levees \u2014 Clear'} color="var(--warn)">{sel.info.levee.map(function(l,i){return <NearbyRow key={i} label={l.n+(l.s?' ['+l.s+']':'')} dist={l.d} dir={l.dir}/>;})}{!sel.info.levee.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
                   <DetailBox title={sel.info.faa.length?'Airports ('+sel.info.faa.length+')':'Airports \u2014 Clear'} color="#06b6d4">{sel.info.faa.map(function(a,i){return <NearbyRow key={i} label={a.n} dist={a.dist} dir={a.brg}/>;})}{!sel.info.faa.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 10,000ft</div>}</DetailBox>
-                </>:<>
-                  {sel.pm&&sel.pm.length>0?sel.pm.map(function(p,i){return <PermitCard key={i} p={p}/>;}):
-                  <div style={{fontSize:12,color:'var(--muted)',textAlign:'center',padding:14}}>No permits flagged</div>}
-                </>}
+                  <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Status</div>
+                  <div style={{display:'flex',gap:3,marginBottom:10,flexWrap:'wrap'}}>
+                    {Object.entries(PIN_COLORS).map(function(e){var k=e[0],c=e[1];var isS=selPt.color===k;return <button key={k} onClick={function(){updatePoint(selPt.id,{color:k});}} style={{fontSize:10,padding:'3px 9px',borderRadius:11,cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,display:'flex',alignItems:'center',gap:3,border:isS?'2px solid '+c.bg:'1px solid var(--glass-border)',background:isS?c.bg+'44':'transparent',color:isS?'#fff':'var(--muted)'}}><span style={{width:6,height:6,borderRadius:'50%',background:c.bg}}/>{c.label}</button>;})}
+                  </div>
+                  <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Notes</div>
+                  <textarea value={selPt.notes||''} onChange={function(e){updatePoint(selPt.id,{notes:e.target.value});}} placeholder="Add notes..." style={{width:'100%',minHeight:50,padding:9,borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.05)',color:'var(--text)',fontSize:11,fontFamily:'var(--font)',outline:'none',resize:'vertical'}}/>
               </div>
             </div>
             :pts.length>0&&Object.keys(res).length>0?<div style={{color:'var(--muted)',fontSize:11,textAlign:'center',padding:20}}>Select a location to see its results</div>
