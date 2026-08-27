@@ -158,7 +158,7 @@ export default function App(){
       var brng=bearing(measurePts[0][0],measurePts[0][1],measurePts[measurePts.length-1][0],measurePts[measurePts.length-1][1]);
       var totalFt=total*3.28084;var distStr=totalFt>5280?((totalFt/5280).toFixed(2)+' mi'):(Math.round(totalFt)+' ft');
       var mid=measurePts[Math.floor(measurePts.length/2)];
-      var mk=L.marker(mid,{icon:L.divIcon({className:'',html:'<div style="background:rgba(0,0,0,0.9);color:#fff;padding:6px 12px;border-radius:6px;font-size:13px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(255,255,255,0.25);box-shadow:0 2px 8px rgba(0,0,0,0.5)">'+distStr+' | '+brng.toFixed(1)+'\u00b0</div>',iconAnchor:[70,-20]})}).addTo(m);
+      var mk=L.marker(mid,{icon:L.divIcon({className:'',iconSize:null,html:'<div style="display:inline-block;background:rgba(0,0,0,0.9);color:#fff;padding:6px 12px;border-radius:6px;font-size:13px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(255,255,255,0.25);box-shadow:0 2px 8px rgba(0,0,0,0.5)">'+distStr+' | '+brng.toFixed(1)+'\u00b0</div>',iconAnchor:[70,-20]})}).addTo(m);
       measureMarkersRef.current.push(mk);
     }
     measurePts.forEach(function(pt){var mk=L.circleMarker(pt,{radius:5,color:'#fff',fillColor:'#fff',fillOpacity:1,weight:2}).addTo(m);measureMarkersRef.current.push(mk);});
@@ -174,8 +174,8 @@ export default function App(){
       var units=polygonAreaMultiUnit(areaPts);
       var center=areaPts.reduce(function(a,p){return[a[0]+p[0]/areaPts.length,a[1]+p[1]/areaPts.length];},[0,0]);
       var line1=units.acres.toFixed(2)+' ac';var line2=units.sqft>100000?(units.sqft/1000000).toFixed(2)+' M sq ft':Math.round(units.sqft).toLocaleString()+' sq ft';var line3=units.sqmi>=0.01?units.sqmi.toFixed(3)+' sq mi':'';
-      var html='<div style="background:rgba(0,0,0,0.9);color:#a855f7;padding:6px 10px;border-radius:6px;font-size:12px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(168,85,247,0.4);line-height:1.6">'+line1+'<br><span style="color:#c4b5fd;font-size:11px">'+line2+'</span>'+(line3?'<br><span style="color:#c4b5fd;font-size:11px">'+line3+'</span>':'')+'</div>';
-      var mk=L.marker(center,{icon:L.divIcon({className:'',html:html,iconAnchor:[60,14]})}).addTo(m);
+      var html='<div style="display:inline-block;background:rgba(0,0,0,0.9);color:#a855f7;padding:6px 10px;border-radius:6px;font-size:12px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(168,85,247,0.4);line-height:1.6">'+line1+'<br><span style="color:#c4b5fd;font-size:11px">'+line2+'</span>'+(line3?'<br><span style="color:#c4b5fd;font-size:11px">'+line3+'</span>':'')+'</div>';
+      var mk=L.marker(center,{icon:L.divIcon({className:'',iconSize:null,html:html,iconAnchor:[60,14]})}).addTo(m);
       areaMarkersRef.current.push(mk);
     }
     areaPts.forEach(function(pt){var mk=L.circleMarker(pt,{radius:5,color:'#a855f7',fillColor:'#a855f7',fillOpacity:1,weight:2}).addTo(m);areaMarkersRef.current.push(mk);});
@@ -252,7 +252,7 @@ export default function App(){
         var d0=has.info.dot[0];var cpp=d0.cp;
         var dl=L.polyline([[pt.lat,pt.lng],[cpp[0],cpp[1]]],{color:'#4a9eff',weight:2,dashArray:'4 4',opacity:0.9,interactive:false}).addTo(m);
         var dft=Math.round(d0.d*3.28084);var dstr=dft>5280?((dft/5280).toFixed(2)+' mi'):(dft+' ft');
-        var dlbl=L.marker([(pt.lat+cpp[0])/2,(pt.lng+cpp[1])/2],{icon:L.divIcon({className:'',html:'<div style="background:rgba(0,0,0,0.9);color:#4a9eff;padding:4px 10px;border-radius:5px;font-size:11px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(74,158,255,0.35)">'+dstr+' '+(d0.dir||'')+' \u00b7 '+d0.n+' centerline'+(d0.w?' \u00b7 ~'+Math.max(0,Math.round(d0.d*3.28084-d0.w/2))+'ft EOP est.':'')+'</div>',iconAnchor:[80,-8]}),interactive:false}).addTo(m);
+        var dlbl=L.marker([(pt.lat+cpp[0])/2,(pt.lng+cpp[1])/2],{icon:L.divIcon({className:'',iconSize:null,html:'<div style="display:inline-block;background:rgba(0,0,0,0.9);color:#4a9eff;padding:4px 10px;border-radius:5px;font-size:12px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(74,158,255,0.35);box-shadow:0 2px 8px rgba(0,0,0,0.5)">'+dstr+' '+(d0.dir||'')+' \u00b7 '+d0.n+' centerline'+(d0.w?' \u00b7 ~'+Math.max(0,Math.round(d0.d*3.28084-d0.w/2))+'ft EOP est.':'')+'</div>',iconAnchor:[80,-8]}),interactive:false}).addTo(m);
         pinMeasureLinesRef.current.push(dl);pinMeasureLinesRef.current.push(dlbl);
       }
     });
@@ -260,11 +260,11 @@ export default function App(){
       var selPts=selIds.map(function(id){return pts.find(function(p){return p.id===id;});}).filter(Boolean);
       for(var i=0;i<selPts.length-1;i++){var a=selPts[i],b=selPts[i+1];var dist=haversine(a.lat,a.lng,b.lat,b.lng);var distFt=Math.round(dist*3.28084);var distStr=distFt>5280?((distFt/5280).toFixed(2)+' mi'):(distFt+' ft');var brg=bearing(a.lat,a.lng,b.lat,b.lng);
         var line=L.polyline([[a.lat,a.lng],[b.lat,b.lng]],{color:'#4a9eff',weight:2,dashArray:'6 4',opacity:0.9}).addTo(m);
-        var label=L.marker([(a.lat+b.lat)/2,(a.lng+b.lng)/2],{icon:L.divIcon({className:'',html:'<div style="background:rgba(0,0,0,0.9);color:#4a9eff;padding:4px 10px;border-radius:5px;font-size:12px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(74,158,255,0.3)">'+distStr+' | '+brg.toFixed(1)+'\u00b0</div>',iconAnchor:[60,-10]}),interactive:false}).addTo(m);
+        var label=L.marker([(a.lat+b.lat)/2,(a.lng+b.lng)/2],{icon:L.divIcon({className:'',iconSize:null,html:'<div style="display:inline-block;background:rgba(0,0,0,0.9);color:#4a9eff;padding:4px 10px;border-radius:5px;font-size:12px;font-family:var(--mono);white-space:nowrap;font-weight:600;border:1px solid rgba(74,158,255,0.3)">'+distStr+' | '+brg.toFixed(1)+'\u00b0</div>',iconAnchor:[60,-10]}),interactive:false}).addTo(m);
         pinMeasureLinesRef.current.push(line);pinMeasureLinesRef.current.push(label);
       }
       if(selPts.length>=3){var td=0;for(var j=0;j<selPts.length-1;j++){td+=haversine(selPts[j].lat,selPts[j].lng,selPts[j+1].lat,selPts[j+1].lng);}var tf=Math.round(td*3.28084);var ts=tf>5280?((tf/5280).toFixed(2)+' mi'):(tf+' ft');var lp=selPts[selPts.length-1];
-        var tl=L.marker([lp.lat,lp.lng],{icon:L.divIcon({className:'',html:'<div style="background:rgba(0,0,0,0.9);color:#fff;padding:4px 10px;border-radius:5px;font-size:12px;font-family:var(--mono);white-space:nowrap;font-weight:700;border:1px solid rgba(255,255,255,0.2)">Total: '+ts+'</div>',iconAnchor:[50,20]}),interactive:false}).addTo(m);pinMeasureLinesRef.current.push(tl);}
+        var tl=L.marker([lp.lat,lp.lng],{icon:L.divIcon({className:'',iconSize:null,html:'<div style="display:inline-block;background:rgba(0,0,0,0.9);color:#fff;padding:4px 10px;border-radius:5px;font-size:12px;font-family:var(--mono);white-space:nowrap;font-weight:700;border:1px solid rgba(255,255,255,0.2)">Total: '+ts+'</div>',iconAnchor:[50,20]}),interactive:false}).addTo(m);pinMeasureLinesRef.current.push(tl);}
     }
   },[pts,selId,selIds,res]);
 
