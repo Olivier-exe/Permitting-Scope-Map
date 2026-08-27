@@ -289,7 +289,7 @@ export default function App(){
     var idx=list.findIndex(function(p){return p.id===selId;});
     var next=idx<0?(dir>0?0:list.length-1):(idx+dir+list.length)%list.length;
     var pt=list[next];setSelId(pt.id);setSelIds([]);
-    if(mapInst.current){var m=mapInst.current;var z=m.getZoom();m.flyTo([pt.lat,pt.lng],z>=14?z:14,{duration:0.6});}
+    if(mapInst.current){var m=mapInst.current;var z=Math.round(m.getZoom());m.flyTo([pt.lat,pt.lng],z>=14?z:14,{duration:0.6});}
   },[pts,res,selId]);
 
   // Arrow keys cycle points while the Results tab is open (ignored while typing)
@@ -582,7 +582,7 @@ export default function App(){
         </div>}
         <div style={{position:'absolute',bottom:18,right:14,zIndex:1000,background:'rgba(18,18,26,0.85)',backdropFilter:'blur(20px)',border:'1px solid var(--glass-border)',borderRadius:10,padding:'6px 12px',fontFamily:'var(--mono)',fontSize:10,color:'var(--muted)',display:'flex',gap:12}}>
           <span>{cursorCoords?cursorCoords.lat+', '+cursorCoords.lng:'\u2014'}</span>
-          <span>z{zoomLevel}</span>
+          <span>z{Math.round(zoomLevel*10)/10}</span>
           {co&&<span>{co.short}</span>}
           <span>{pts.length} pts{totalPermits>0?' \u00b7 '+totalPermits+' permits':''}</span>
         </div>
