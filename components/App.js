@@ -52,6 +52,17 @@ export default function App(){
   var [areaMode,setAreaMode]=useState(false);
   var [areaPts,setAreaPts]=useState([]);
   var [basemap,setBasemap]=useState('dark');
+  /* ---- Share v2 (expiring links / project numbers). Server-controlled kill
+     switch: /api/share reports enabled only when storage env vars are set.
+     When off/absent, everything below is dormant and Share behaves as before.
+     Removal: revert the share-links commit (tag pre-share-checkpoint). ---- */
+  var [shareV2,setShareV2]=useState(false);
+  var [shareOpen,setShareOpen]=useState(false);
+  var [shareTtl,setShareTtl]=useState(30);
+  var [shareProj,setShareProj]=useState('');
+  var [shareBy,setShareBy]=useState('');
+  var [shareBusy,setShareBusy]=useState(false);
+  var [shareErr,setShareErr]=useState('');
   var [err,setErr]=useState('');
   var [cursorCoords,setCursorCoords]=useState(null);
   var [zoomLevel,setZoomLevel]=useState(7);
@@ -366,7 +377,49 @@ export default function App(){
 
   var getShareLink=useCallback(function(){if(!pts.length)return;var params=pts.map(function(p){return p.lat.toFixed(5)+','+p.lng.toFixed(5)+','+encodeURIComponent(p.name);}).join('|');navigator.clipboard.writeText(window.location.origin+'?pins='+params+'&co='+(company||'')).then(function(){setStatusMsg('Link copied!');setTimeout(function(){setStatusMsg('');},2000);});},[pts,company]);
 
-  useEffect(function(){var params=new URLSearchParams(window.location.search);var pinStr=params.get('pins');var coStr=params.get('co');if(pinStr){setPts(pinStr.split('|').map(function(p){var parts=p.split(',');return{id:nextId.current++,lat:parseFloat(parts[0]),lng:parseFloat(parts[1]),name:decodeURIComponent(parts[2]||'Pin'),color:'review',notes:''};}));}if(coStr&&manifest)setCompany(coStr);},[manifest]);
+  // Share v2: ask the server once whether expiring shares are enabled
+  useEffect(function(){fetch('/api/share').then(function(r){return r.json();}).then(function(d){setShareV2(!!(d&&d.enabled));}).catch(function(){});},[]);
+
+  var loadSharedPayload=useCallback(function(d){
+    if(!d||!Array.isArray(d.pts)||!d.pts.length){setErr(d&&d.error?d.error:'Shared set not found');return;}
+    nextId.current=1;
+    setPts(d.pts.map(function(p){return{id:nextId.current++,lat:p.lat,lng:p.lng,name:p.name||'Pin',color:p.color||'review',notes:p.notes||''};}));
+    setRes({});setSelId(null);setSelIds([]);
+    if(d.company)setCompany(d.company);
+    var days=d.secondsLeft?Math.max(1,Math.round(d.secondsLeft/86400)):null;
+    setStatusMsg('Shared set: '+d.pts.length+' pts'+(d.by?' \u00b7 by '+d.by:'')+(d.project?' \u00b7 Proj '+d.project:'')+(days?' \u00b7 expires in '+days+'d':''));
+    setTimeout(function(){setStatusMsg('');},8000);
+  },[]);
+
+  var createShareV2=useCallback(function(){
+    if(!pts.length||shareBusy)return;setShareBusy(true);setShareErr('');
+    fetch('/api/share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      pts:pts.map(function(p){return{lat:p.lat,lng:p.lng,name:p.name,color:p.color,notes:p.notes};}),
+      company:company||'',ttl:shareTtl,project:shareProj.trim()||undefined,by:shareBy.trim()||undefined})})
+    .then(function(r){return r.json();}).then(function(d){
+      setShareBusy(false);
+      if(d.error){setShareErr(d.error);return;}
+      var msg='Link copied \u00b7 expires '+new Date(d.expires).toLocaleDateString()+(d.project?' \u00b7 saved as Proj '+d.project:'');
+      navigator.clipboard.writeText(d.url).then(function(){setStatusMsg(msg);}).catch(function(){setStatusMsg(d.url);});
+      setShareOpen(false);setTimeout(function(){setStatusMsg('');},6000);
+    }).catch(function(){setShareBusy(false);setShareErr('Share failed \u2014 try again');});
+  },[pts,company,shareTtl,shareProj,shareBy,shareBusy]);
+
+  var openByProject=useCallback(function(){
+    var n=window.prompt('Project number:');if(!n||!n.trim())return;
+    fetch('/api/share?project='+encodeURIComponent(n.trim())).then(function(r){return r.json();}).then(loadSharedPayload)
+    .catch(function(){setErr('Project lookup failed');});
+  },[loadSharedPayload]);
+
+  var sharedLoadedRef=useRef(false);
+  useEffect(function(){var params=new URLSearchParams(window.location.search);
+    var sId=params.get('s'),pNum=params.get('p');
+    if(sId||pNum){
+      if(sharedLoadedRef.current)return;sharedLoadedRef.current=true;
+      fetch('/api/share?'+(sId?'id='+encodeURIComponent(sId):'project='+encodeURIComponent(pNum)))
+        .then(function(r){return r.json();}).then(loadSharedPayload).catch(function(){setErr('Could not load shared set');});
+      return;}
+    var pinStr=params.get('pins');var coStr=params.get('co');if(pinStr){setPts(pinStr.split('|').map(function(p){var parts=p.split(',');return{id:nextId.current++,lat:parseFloat(parts[0]),lng:parseFloat(parts[1]),name:decodeURIComponent(parts[2]||'Pin'),color:'review',notes:''};}));}if(coStr&&manifest)setCompany(coStr);},[manifest,loadSharedPayload]);
 
   // Derived
   var sel=selId?res[selId]:null;var selPt=pts.find(function(p){return p.id===selId;});
@@ -558,7 +611,8 @@ export default function App(){
             {pts.length>0&&<button onClick={saveProject} style={FBTN}>Save</button>}
             <button onClick={function(){projFileRef.current&&projFileRef.current.click();}} style={FBTN}>Open</button>
             <input ref={projFileRef} type="file" accept=".json" style={{display:'none'}} onChange={function(e){if(e.target.files[0])loadProject(e.target.files[0]);}}/>
-            {pts.length>0&&<button onClick={getShareLink} style={FBTN}>Share</button>}
+            {shareV2&&<button onClick={openByProject} style={FBTN}>Proj #</button>}
+            {pts.length>0&&<button onClick={function(){shareV2?(setShareErr(''),setShareOpen(true)):getShareLink();}} style={FBTN}>Share</button>}
           </div>
         </div>
       </div>
@@ -587,6 +641,26 @@ export default function App(){
           <span>{pts.length} pts{totalPermits>0?' \u00b7 '+totalPermits+' permits':''}</span>
         </div>
       </div>
+      {/* ---- Share v2 dialog (floating; renders only when open) ---- */}
+      {shareOpen&&<div onClick={function(){if(!shareBusy)setShareOpen(false);}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:3000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div onClick={function(e){e.stopPropagation();}} style={{width:320,maxWidth:'92vw',background:'var(--surface)',border:'1px solid var(--glass-border)',borderRadius:14,padding:18,boxShadow:'0 18px 60px rgba(0,0,0,0.55)'}}>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>Share {pts.length} point{pts.length>1?'s':''}</div>
+          <div style={{fontSize:10,color:'var(--muted)',marginBottom:12}}>Creates an expiring link. Only people with the link (or project #) can see it.</div>
+          <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Shelf life</div>
+          <div style={{display:'flex',gap:5,marginBottom:12}}>
+            {[7,30,90].map(function(d){var on=shareTtl===d;return <button key={d} onClick={function(){setShareTtl(d);}} style={{flex:1,fontSize:11,padding:'7px 0',borderRadius:8,cursor:'pointer',fontFamily:'var(--font)',fontWeight:700,border:'1px solid '+(on?'transparent':'var(--glass-border)'),background:on?'linear-gradient(135deg,var(--accent),var(--accent2))':'rgba(255,255,255,0.04)',color:on?'#fff':'var(--muted)'}}>{d} days</button>;})}
+          </div>
+          <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Project # <span style={{textTransform:'none',letterSpacing:0,fontWeight:500}}>(optional &mdash; retrievable on the site)</span></div>
+          <input value={shareProj} onChange={function(e){setShareProj(e.target.value);}} placeholder="e.g. WR-4512087" style={{width:'100%',boxSizing:'border-box',padding:'7px 10px',borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.05)',color:'var(--text)',fontSize:11,fontFamily:'var(--font)',outline:'none',marginBottom:12}}/>
+          <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Your name <span style={{textTransform:'none',letterSpacing:0,fontWeight:500}}>(optional)</span></div>
+          <input value={shareBy} onChange={function(e){setShareBy(e.target.value);}} placeholder="Shown to whoever opens it" style={{width:'100%',boxSizing:'border-box',padding:'7px 10px',borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.05)',color:'var(--text)',fontSize:11,fontFamily:'var(--font)',outline:'none',marginBottom:12}}/>
+          {shareErr&&<div style={{color:'var(--danger)',fontSize:10,marginBottom:8}}>{shareErr}</div>}
+          <div style={{display:'flex',gap:6}}>
+            <button disabled={shareBusy} onClick={createShareV2} style={{flex:1,padding:'9px 0',borderRadius:9,border:'none',cursor:shareBusy?'default':'pointer',fontFamily:'var(--font)',fontWeight:700,fontSize:12,color:'#fff',background:shareBusy?'rgba(255,255,255,0.1)':'linear-gradient(135deg,var(--accent),var(--accent2))'}}>{shareBusy?'Creating\u2026':'Create link'}</button>
+            <button disabled={shareBusy} onClick={function(){setShareOpen(false);}} style={{padding:'9px 14px',borderRadius:9,border:'1px solid var(--glass-border)',cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,fontSize:12,color:'var(--muted)',background:'transparent'}}>Cancel</button>
+          </div>
+        </div>
+      </div>}
     </div>
   );
 }
