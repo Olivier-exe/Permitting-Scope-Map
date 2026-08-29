@@ -4,6 +4,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {runFullAnalysis,generatePermits,getElevation,reverseGeocode,haversine,bearing,polygonArea,polygonAreaMultiUnit,parseKML} from '../lib/spatial';
 
+function timeAgo(iso){if(!iso)return'';var s=(Date.now()-new Date(iso).getTime())/1000;if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
+
 var PIN_COLORS = {
   review: {bg:'#e6a23c',label:'Needs Review'},
   approved: {bg:'#00d4aa',label:'Approved'},
@@ -59,10 +61,25 @@ export default function App(){
   var [shareV2,setShareV2]=useState(false);
   var [shareOpen,setShareOpen]=useState(false);
   var [shareTtl,setShareTtl]=useState(30);
-  var [shareProj,setShareProj]=useState('');
   var [shareBy,setShareBy]=useState('');
   var [shareBusy,setShareBusy]=useState(false);
   var [shareErr,setShareErr]=useState('');
+  /* ---- Live projects (same enable flag + storage as Share v2) ---- */
+  var [proj,setProj]=useState(null);
+  var [projDirty,setProjDirty]=useState(false);
+  var [projUpdate,setProjUpdate]=useState(null);
+  var [projUpdateMin,setProjUpdateMin]=useState(false);
+  var [projModal,setProjModal]=useState(false);
+  var [projInput,setProjInput]=useState('');
+  var [projName,setProjName]=useState('');
+  var [projBusy,setProjBusy]=useState(false);
+  var [projErr,setProjErr]=useState('');
+  var [projConflict,setProjConflict]=useState(null);
+  var [projMenu,setProjMenu]=useState(false);
+  var [exportMenu,setExportMenu]=useState(false);
+  var applyingProj=useRef(false);
+  var bootProj=useRef(null);
+  var importRef=useRef(null);
   var [err,setErr]=useState('');
   var [cursorCoords,setCursorCoords]=useState(null);
   var [zoomLevel,setZoomLevel]=useState(7);
@@ -93,14 +110,14 @@ export default function App(){
   useEffect(function(){
     if(!pts.length&&!Object.keys(res).length)return;
     var timeout=setTimeout(function(){
-      try{localStorage.setItem('psm_session',JSON.stringify({pts:pts,res:res,company:company,selId:selId}));}catch(e){}
+      try{localStorage.setItem('psm_session',JSON.stringify({pts:pts,res:res,company:company,selId:selId,projId:proj?proj.id:null,projRev:proj?proj.rev:0,projDirty:projDirty}));}catch(e){}
     },1000);
     return function(){clearTimeout(timeout);};
-  },[pts,res,company,selId]);
+  },[pts,res,company,selId,proj,projDirty]);
 
   // Restore session on mount
   useEffect(function(){
-    try{var s=localStorage.getItem('psm_session');if(s){var d=JSON.parse(s);if(d.pts&&d.pts.length){setPts(d.pts);var maxId=0;d.pts.forEach(function(p){if(p.id>maxId)maxId=p.id;});nextId.current=maxId+1;}if(d.res)setRes(d.res);if(d.company)setCompany(d.company);if(d.selId)setSelId(d.selId);}}catch(e){}
+    try{var s=localStorage.getItem('psm_session');if(s){var d=JSON.parse(s);if(d.pts&&d.pts.length){setPts(d.pts);var maxId=0;d.pts.forEach(function(p){if(p.id>maxId)maxId=p.id;});nextId.current=maxId+1;}if(d.res)setRes(d.res);if(d.company)setCompany(d.company);if(d.selId)setSelId(d.selId);if(d.projId)bootProj.current={id:d.projId,rev:d.projRev||0,dirty:!!d.projDirty};}}catch(e){}
   },[]);
 
   // Resizable panels
@@ -395,31 +412,110 @@ export default function App(){
     if(!pts.length||shareBusy)return;setShareBusy(true);setShareErr('');
     fetch('/api/share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       pts:pts.map(function(p){return{lat:p.lat,lng:p.lng,name:p.name,color:p.color,notes:p.notes};}),
-      company:company||'',ttl:shareTtl,project:shareProj.trim()||undefined,by:shareBy.trim()||undefined})})
+      company:company||'',ttl:shareTtl,by:shareBy.trim()||undefined})})
     .then(function(r){return r.json();}).then(function(d){
       setShareBusy(false);
       if(d.error){setShareErr(d.error);return;}
-      var msg='Link copied \u00b7 expires '+new Date(d.expires).toLocaleDateString()+(d.project?' \u00b7 saved as Proj '+d.project:'');
+      try{if(shareBy.trim())localStorage.setItem('psm_name',shareBy.trim());}catch(e){}
+      var msg='Link copied \u00b7 expires '+new Date(d.expires).toLocaleDateString();
       navigator.clipboard.writeText(d.url).then(function(){setStatusMsg(msg);}).catch(function(){setStatusMsg(d.url);});
       setShareOpen(false);setTimeout(function(){setStatusMsg('');},6000);
     }).catch(function(){setShareBusy(false);setShareErr('Share failed \u2014 try again');});
-  },[pts,company,shareTtl,shareProj,shareBy,shareBusy]);
+  },[pts,company,shareTtl,shareBy,shareBusy]);
 
-  var openByProject=useCallback(function(){
-    var n=window.prompt('Project number:');if(!n||!n.trim())return;
-    fetch('/api/share?project='+encodeURIComponent(n.trim())).then(function(r){return r.json();}).then(loadSharedPayload)
-    .catch(function(){setErr('Project lookup failed');});
-  },[loadSharedPayload]);
+  useEffect(function(){try{var n=localStorage.getItem('psm_name')||'';if(n){setShareBy(n);setProjName(n);}}catch(e){}},[]);
+
+  var applyProject=useCallback(function(d){
+    applyingProj.current=true;
+    nextId.current=1;
+    setPts((d.pts||[]).map(function(p){return{id:nextId.current++,lat:p.lat,lng:p.lng,name:p.name||'Pin',color:p.color||'review',notes:p.notes||''};}));
+    setRes({});setSelId(null);setSelIds([]);
+    if(d.company)setCompany(d.company);
+    setProj({id:d.id,rev:d.rev,by:d.by,savedAt:d.savedAt,secondsLeft:d.secondsLeft||15552000});
+    setProjDirty(false);setProjUpdate(null);setProjUpdateMin(false);setProjConflict(null);
+    setStatusMsg('Project '+d.id+': '+(d.pts||[]).length+' pts'+(d.by?' \u00b7 last save by '+d.by:''));
+    setTimeout(function(){setStatusMsg('');},6000);
+  },[]);
+
+  // Any local point edit while in a project marks it dirty
+  useEffect(function(){if(!proj)return;if(applyingProj.current){applyingProj.current=false;return;}setProjDirty(true);},[pts]);
+
+  // Rejoin the session's project on boot (explicit ?s= / ?p= links win)
+  useEffect(function(){
+    if(!shareV2||!bootProj.current)return;
+    var bp=bootProj.current;bootProj.current=null;
+    var params=new URLSearchParams(window.location.search);
+    if(params.get('s')||params.get('p'))return;
+    fetch('/api/project?id='+encodeURIComponent(bp.id)).then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.found){setStatusMsg('Project '+bp.id+' has expired');setTimeout(function(){setStatusMsg('');},5000);return;}
+      if(d.rev===bp.rev){setProj({id:d.id,rev:d.rev,by:d.by,savedAt:d.savedAt,secondsLeft:d.secondsLeft});setProjDirty(bp.dirty);}
+      else{setProj({id:d.id,rev:bp.rev,by:d.by,savedAt:d.savedAt,secondsLeft:d.secondsLeft});setProjDirty(bp.dirty);setProjUpdate(d);setProjUpdateMin(false);}
+    }).catch(function(){});
+  },[shareV2]);
+
+  // Poll for teammate saves every 30s while in a project (visible tab only)
+  useEffect(function(){
+    if(!proj||!shareV2)return;
+    var t=setInterval(function(){
+      if(document.visibilityState!=='visible')return;
+      var known=projUpdate?projUpdate.rev:proj.rev;
+      fetch('/api/project?id='+encodeURIComponent(proj.id)+'&rev='+known).then(function(r){return r.json();}).then(function(d){
+        if(!d)return;
+        if(d.found===false){setStatusMsg('Project '+proj.id+' no longer exists');setTimeout(function(){setStatusMsg('');},5000);setProj(null);setProjUpdate(null);return;}
+        if(d.found&&d.rev>proj.rev&&(!projUpdate||d.rev>projUpdate.rev)){setProjUpdate(d);setProjUpdateMin(false);}
+      }).catch(function(){});
+    },30000);
+    return function(){clearInterval(t);};
+  },[proj,shareV2,projUpdate]);
+
+  var projSave=useCallback(function(force){
+    if(!proj||projBusy)return;setProjBusy(true);
+    var nm=projName.trim();try{if(nm)localStorage.setItem('psm_name',nm);}catch(e){}
+    fetch('/api/project',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:proj.id,pts:pts.map(function(p){return{lat:p.lat,lng:p.lng,name:p.name,color:p.color,notes:p.notes};}),company:company||'',by:nm,baseRev:proj.rev,force:!!force})})
+    .then(function(r){return r.json();}).then(function(d){
+      setProjBusy(false);
+      if(d.conflict){setProjConflict(d);return;}
+      if(d.error){setStatusMsg(d.error);setTimeout(function(){setStatusMsg('');},4000);return;}
+      setProj(function(p){return p?{id:p.id,rev:d.rev,by:nm,savedAt:d.savedAt,secondsLeft:15552000}:p;});
+      setProjDirty(false);setProjConflict(null);setProjUpdate(null);setProjUpdateMin(false);
+      setStatusMsg('Saved to '+proj.id);setTimeout(function(){setStatusMsg('');},3000);
+    }).catch(function(){setProjBusy(false);setStatusMsg('Save failed \u2014 try again');setTimeout(function(){setStatusMsg('');},4000);});
+  },[proj,projBusy,projName,pts,company]);
+
+  var projLoadLatest=useCallback(function(){
+    if(projUpdate&&projUpdate.pts){applyProject(projUpdate);return;}
+    if(!proj)return;
+    fetch('/api/project?id='+encodeURIComponent(proj.id)).then(function(r){return r.json();}).then(function(d){if(d&&d.found)applyProject(d);}).catch(function(){});
+  },[projUpdate,proj,applyProject]);
+
+  var projOpenStart=useCallback(function(){
+    var id=projInput.trim();if(!id||projBusy)return;setProjBusy(true);setProjErr('');
+    var nm=projName.trim();try{if(nm)localStorage.setItem('psm_name',nm);}catch(e){}
+    fetch('/api/project?id='+encodeURIComponent(id)).then(function(r){return r.json();}).then(function(d){
+      if(d.error){setProjErr(d.error);setProjBusy(false);return;}
+      if(d.found){applyProject(d);setProjModal(false);setProjBusy(false);setProjInput('');return;}
+      fetch('/api/project',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,pts:pts.map(function(p){return{lat:p.lat,lng:p.lng,name:p.name,color:p.color,notes:p.notes};}),company:company||'',by:nm,force:true})})
+      .then(function(r){return r.json();}).then(function(s){
+        setProjBusy(false);
+        if(s.error){setProjErr(s.error);return;}
+        setProj({id:s.id,rev:s.rev,by:nm,savedAt:s.savedAt,secondsLeft:15552000});
+        setProjDirty(false);setProjModal(false);setProjInput('');
+        setStatusMsg('Project '+s.id+' created \u00b7 '+pts.length+' pts');setTimeout(function(){setStatusMsg('');},5000);
+      }).catch(function(){setProjBusy(false);setProjErr('Create failed');});
+    }).catch(function(){setProjBusy(false);setProjErr('Lookup failed');});
+  },[projInput,projBusy,projName,pts,company,applyProject]);
+
+  var projLeave=useCallback(function(){setProj(null);setProjDirty(false);setProjUpdate(null);setProjConflict(null);setStatusMsg('Left project');setTimeout(function(){setStatusMsg('');},2500);},[]);
 
   var sharedLoadedRef=useRef(false);
   useEffect(function(){var params=new URLSearchParams(window.location.search);
     var sId=params.get('s'),pNum=params.get('p');
     if(sId||pNum){
       if(sharedLoadedRef.current)return;sharedLoadedRef.current=true;
-      fetch('/api/share?'+(sId?'id='+encodeURIComponent(sId):'project='+encodeURIComponent(pNum)))
-        .then(function(r){return r.json();}).then(loadSharedPayload).catch(function(){setErr('Could not load shared set');});
+      if(sId){fetch('/api/share?id='+encodeURIComponent(sId)).then(function(r){return r.json();}).then(loadSharedPayload).catch(function(){setErr('Could not load shared set');});}
+      else{fetch('/api/project?id='+encodeURIComponent(pNum)).then(function(r){return r.json();}).then(function(d){if(d&&d.found)applyProject(d);else setErr(d&&d.error?d.error:'Project not found');}).catch(function(){setErr('Could not load project');});}
       return;}
-    var pinStr=params.get('pins');var coStr=params.get('co');if(pinStr){setPts(pinStr.split('|').map(function(p){var parts=p.split(',');return{id:nextId.current++,lat:parseFloat(parts[0]),lng:parseFloat(parts[1]),name:decodeURIComponent(parts[2]||'Pin'),color:'review',notes:''};}));}if(coStr&&manifest)setCompany(coStr);},[manifest,loadSharedPayload]);
+    var pinStr=params.get('pins');var coStr=params.get('co');if(pinStr){setPts(pinStr.split('|').map(function(p){var parts=p.split(',');return{id:nextId.current++,lat:parseFloat(parts[0]),lng:parseFloat(parts[1]),name:decodeURIComponent(parts[2]||'Pin'),color:'review',notes:''};}));}if(coStr&&manifest)setCompany(coStr);},[manifest,loadSharedPayload,applyProject]);
 
   // Derived
   var sel=selId?res[selId]:null;var selPt=pts.find(function(p){return p.id===selId;});
@@ -447,6 +543,9 @@ export default function App(){
   var PILL=function(on){return{fontSize:10,padding:'4px 10px',borderRadius:7,cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,border:'1px solid '+(on?'transparent':'var(--glass-border)'),background:on?'linear-gradient(135deg,var(--accent),var(--accent2))':'rgba(255,255,255,0.04)',color:on?'#fff':'var(--muted)'};};
   var BMPILL=function(on){return{fontSize:10,padding:'4px 9px',borderRadius:7,cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,border:'1px solid '+(on?'var(--accent)':'var(--glass-border)'),background:on?'rgba(232,67,79,0.12)':'rgba(255,255,255,0.04)',color:on?'var(--accent)':'var(--muted)'};};
   var FBTN={fontSize:10,padding:'5px 10px',borderRadius:7,cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.04)',color:'var(--muted)'};
+  var PMENU={display:'block',width:'100%',textAlign:'left',fontSize:10.5,padding:'6px 9px',border:'none',background:'transparent',color:'var(--text)',cursor:'pointer',fontFamily:'var(--font)',borderRadius:6,fontWeight:600};
+  var PLABEL={fontSize:8,letterSpacing:1.8,textTransform:'uppercase',color:'var(--muted)',fontWeight:800,margin:'0 2px 5px'};
+  var ACCENTBTN={fontSize:10,fontWeight:700,color:'#fff',background:'linear-gradient(135deg,var(--accent),var(--accent2))',border:'none',borderRadius:8,padding:'6px 11px',cursor:'pointer',fontFamily:'var(--font)'};
   var NAVBTN={width:28,height:28,borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.04)',color:'var(--muted)',cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'var(--font)',flexShrink:0,lineHeight:1,padding:0};
 
   return (
@@ -596,23 +695,54 @@ export default function App(){
         </div>
         {/* ============ FOOTER ============ */}
         <div style={{borderTop:'1px solid var(--glass-border)',padding:'8px 12px',flexShrink:0}} onDragOver={function(e){e.preventDefault();}} onDrop={function(e){e.preventDefault();var f=e.dataTransfer.files[0];if(f){var n=f.name.toLowerCase();if(n.endsWith('.csv'))handleCSV(f);else if(n.endsWith('.kml')||n.endsWith('.kmz'))handleKMLFile(f);}}}>
+          {shareV2&&<div style={{marginBottom:8}}>
+            <div style={PLABEL}>Project</div>
+            {proj?<div style={{border:'1px solid rgba(232,67,79,0.35)',background:'linear-gradient(135deg,rgba(232,67,79,0.10),rgba(240,101,67,0.05))',borderRadius:10,padding:'7px 9px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{width:7,height:7,borderRadius:'50%',flexShrink:0,background:projUpdate?'#e6a23c':'var(--success)',boxShadow:'0 0 6px '+(projUpdate?'#e6a23c':'var(--success)')}}/>
+                <div style={{minWidth:0,flex:1}}>
+                  <div style={{fontSize:12,fontWeight:800,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{proj.id}</div>
+                  <div style={{fontSize:9,color:projDirty?'#e6a23c':'var(--muted)',marginTop:1}}>{projDirty?'Unsaved changes':((proj.by?proj.by+' saved ':'Saved ')+timeAgo(proj.savedAt))}{proj.secondsLeft?' \u00b7 expires in '+Math.max(1,Math.round(proj.secondsLeft/86400))+'d':''}</div>
+                </div>
+                <button disabled={projBusy} onClick={function(){projSave(false);}} style={Object.assign({},ACCENTBTN,projBusy?{background:'rgba(255,255,255,0.1)',cursor:'default'}:{})}>{projBusy?'\u2026':'Save'}</button>
+                <div style={{position:'relative'}}>
+                  <button onClick={function(){setProjMenu(!projMenu);}} style={Object.assign({},FBTN,{padding:'5px 8px',fontWeight:800})}>&#8942;</button>
+                  {projMenu&&<div style={{position:'absolute',bottom:'110%',right:0,background:'var(--surface)',border:'1px solid var(--glass-border)',borderRadius:9,padding:4,zIndex:2500,boxShadow:'0 10px 30px rgba(0,0,0,0.5)',minWidth:140}}>
+                    <button onClick={function(){setProjMenu(false);navigator.clipboard.writeText(window.location.origin+'/?p='+encodeURIComponent(proj.id)).then(function(){setStatusMsg('Project link copied');setTimeout(function(){setStatusMsg('');},2500);}).catch(function(){});}} style={PMENU}>Copy project link</button>
+                    <button onClick={function(){setProjMenu(false);setProjErr('');setProjModal(true);}} style={PMENU}>Switch project</button>
+                    <button onClick={function(){setProjMenu(false);projLeave();}} style={PMENU}>Leave project</button>
+                  </div>}
+                </div>
+              </div>
+              {projUpdate&&!projUpdateMin&&<div style={{display:'flex',alignItems:'center',gap:6,marginTop:7,paddingTop:7,borderTop:'1px solid rgba(255,255,255,0.08)'}}>
+                <div style={{fontSize:9.5,color:'#e6a23c',flex:1}}>{(projUpdate.by||'Teammate')+' saved '+timeAgo(projUpdate.savedAt)}</div>
+                <button onClick={projLoadLatest} style={Object.assign({},FBTN,{color:'#0b0d11',background:'#e6a23c',border:'1px solid transparent',fontWeight:700})}>Load</button>
+                <button onClick={function(){setProjUpdateMin(true);}} style={Object.assign({},FBTN,{padding:'5px 8px'})}>&#10005;</button>
+              </div>}
+              {projUpdate&&projUpdateMin&&<div onClick={function(){setProjUpdateMin(false);}} style={{fontSize:9,color:'#e6a23c',marginTop:5,cursor:'pointer'}}>Update available \u2014 tap to view</div>}
+            </div>
+            :<div style={{border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.03)',borderRadius:10,padding:'7px 9px',display:'flex',alignItems:'center',gap:8}}>
+              <div style={{fontSize:11,fontWeight:600,color:'var(--muted)',flex:1}}>No project</div>
+              <button onClick={function(){setProjErr('');setProjModal(true);}} style={ACCENTBTN}>Open / Start</button>
+            </div>}
+          </div>}
           <div style={{display:'flex',gap:4,marginBottom:6}}>
             <button onClick={function(){setPinMode(!pinMode);setMeasureMode(false);setAreaMode(false);}} style={Object.assign({},FBTN,{flex:1},pinMode?{background:'linear-gradient(135deg,var(--accent),var(--accent2))',color:'#fff',border:'1px solid transparent'}:{})}>+ Pin</button>
             <button onClick={function(){setMeasureMode(!measureMode);setPinMode(false);setAreaMode(false);if(measureMode)setMeasurePts([]);}} style={Object.assign({},FBTN,{flex:1},measureMode?{background:'#4a9eff',color:'#fff',border:'1px solid transparent'}:{})}>Measure</button>
             <button onClick={function(){setAreaMode(!areaMode);setPinMode(false);setMeasureMode(false);if(areaMode)setAreaPts([]);}} style={Object.assign({},FBTN,{flex:1},areaMode?{background:'#a855f7',color:'#fff',border:'1px solid transparent'}:{})}>Area</button>
           </div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
-            <button onClick={function(){fileRef.current&&fileRef.current.click();}} style={FBTN}>Import CSV</button>
-            <input ref={fileRef} type="file" accept=".csv" style={{display:'none'}} onChange={function(e){if(e.target.files[0])handleCSV(e.target.files[0]);}}/>
-            <button onClick={function(){kmlFileRef.current&&kmlFileRef.current.click();}} style={FBTN}>Import KML</button>
-            <input ref={kmlFileRef} type="file" accept=".kml,.kmz" style={{display:'none'}} onChange={function(e){if(e.target.files[0])handleKMLFile(e.target.files[0]);}}/>
-            {pts.length>0&&<button onClick={exportCSV} style={FBTN}>Export CSV</button>}
-            {pts.length>0&&<button onClick={exportKML} style={Object.assign({},FBTN,{borderColor:'rgba(0,212,170,0.4)',color:'var(--success)'})}>Export KML</button>}
-            {pts.length>0&&<button onClick={saveProject} style={FBTN}>Save</button>}
-            <button onClick={function(){projFileRef.current&&projFileRef.current.click();}} style={FBTN}>Open</button>
-            <input ref={projFileRef} type="file" accept=".json" style={{display:'none'}} onChange={function(e){if(e.target.files[0])loadProject(e.target.files[0]);}}/>
-            {shareV2&&<button onClick={openByProject} style={FBTN}>Proj #</button>}
-            {pts.length>0&&<button onClick={function(){shareV2?(setShareErr(''),setShareOpen(true)):getShareLink();}} style={FBTN}>Share</button>}
+          <div style={{display:'flex',gap:4}}>
+            <button onClick={function(){importRef.current&&importRef.current.click();}} style={Object.assign({},FBTN,{flex:1})}>Import</button>
+            <input ref={importRef} type="file" accept=".csv,.kml,.kmz,.json" style={{display:'none'}} onChange={function(e){var f=e.target.files[0];if(!f)return;var n=f.name.toLowerCase();if(n.endsWith('.csv'))handleCSV(f);else if(n.endsWith('.kml')||n.endsWith('.kmz'))handleKMLFile(f);else if(n.endsWith('.json'))loadProject(f);e.target.value='';}}/>
+            <div style={{position:'relative',flex:1,display:'flex'}}>
+              <button onClick={function(){setExportMenu(!exportMenu);}} style={Object.assign({},FBTN,{flex:1})}>Export &#9662;</button>
+              {exportMenu&&<div style={{position:'absolute',bottom:'110%',left:0,right:0,background:'var(--surface)',border:'1px solid var(--glass-border)',borderRadius:9,padding:4,zIndex:2500,boxShadow:'0 10px 30px rgba(0,0,0,0.5)'}}>
+                <button onClick={function(){setExportMenu(false);exportCSV();}} style={PMENU}>CSV</button>
+                <button onClick={function(){setExportMenu(false);exportKML();}} style={PMENU}>KML</button>
+                <button onClick={function(){setExportMenu(false);saveProject();}} style={PMENU}>Project file</button>
+              </div>}
+            </div>
+            <button onClick={function(){if(!pts.length)return;shareV2?(setShareErr(''),setShareOpen(true)):getShareLink();}} style={Object.assign({},FBTN,{flex:1},pts.length?{color:'#fff',background:'linear-gradient(135deg,var(--accent),var(--accent2))',border:'1px solid transparent',fontWeight:700}:{opacity:0.45,cursor:'default'})}>Share</button>
           </div>
         </div>
       </div>
@@ -650,14 +780,40 @@ export default function App(){
           <div style={{display:'flex',gap:5,marginBottom:12}}>
             {[7,30,90].map(function(d){var on=shareTtl===d;return <button key={d} onClick={function(){setShareTtl(d);}} style={{flex:1,fontSize:11,padding:'7px 0',borderRadius:8,cursor:'pointer',fontFamily:'var(--font)',fontWeight:700,border:'1px solid '+(on?'transparent':'var(--glass-border)'),background:on?'linear-gradient(135deg,var(--accent),var(--accent2))':'rgba(255,255,255,0.04)',color:on?'#fff':'var(--muted)'}}>{d} days</button>;})}
           </div>
-          <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Project # <span style={{textTransform:'none',letterSpacing:0,fontWeight:500}}>(optional &mdash; retrievable on the site)</span></div>
-          <input value={shareProj} onChange={function(e){setShareProj(e.target.value);}} placeholder="e.g. WR-4512087" style={{width:'100%',boxSizing:'border-box',padding:'7px 10px',borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.05)',color:'var(--text)',fontSize:11,fontFamily:'var(--font)',outline:'none',marginBottom:12}}/>
           <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Your name <span style={{textTransform:'none',letterSpacing:0,fontWeight:500}}>(optional)</span></div>
           <input value={shareBy} onChange={function(e){setShareBy(e.target.value);}} placeholder="Shown to whoever opens it" style={{width:'100%',boxSizing:'border-box',padding:'7px 10px',borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.05)',color:'var(--text)',fontSize:11,fontFamily:'var(--font)',outline:'none',marginBottom:12}}/>
           {shareErr&&<div style={{color:'var(--danger)',fontSize:10,marginBottom:8}}>{shareErr}</div>}
           <div style={{display:'flex',gap:6}}>
             <button disabled={shareBusy} onClick={createShareV2} style={{flex:1,padding:'9px 0',borderRadius:9,border:'none',cursor:shareBusy?'default':'pointer',fontFamily:'var(--font)',fontWeight:700,fontSize:12,color:'#fff',background:shareBusy?'rgba(255,255,255,0.1)':'linear-gradient(135deg,var(--accent),var(--accent2))'}}>{shareBusy?'Creating\u2026':'Create link'}</button>
             <button disabled={shareBusy} onClick={function(){setShareOpen(false);}} style={{padding:'9px 14px',borderRadius:9,border:'1px solid var(--glass-border)',cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,fontSize:12,color:'var(--muted)',background:'transparent'}}>Cancel</button>
+          </div>
+        </div>
+      </div>}
+      {/* ---- Open / start project dialog ---- */}
+      {projModal&&<div onClick={function(){if(!projBusy)setProjModal(false);}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:3000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div onClick={function(e){e.stopPropagation();}} style={{width:320,maxWidth:'92vw',background:'var(--surface)',border:'1px solid var(--glass-border)',borderRadius:14,padding:18,boxShadow:'0 18px 60px rgba(0,0,0,0.55)'}}>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>Open or start a project</div>
+          <div style={{fontSize:10,color:'var(--muted)',marginBottom:12}}>Opens it if it exists \u2014 otherwise creates it with your current {pts.length} point{pts.length===1?'':'s'}. Projects expire 180 days after their last save.</div>
+          <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Project #</div>
+          <input value={projInput} onChange={function(e){setProjInput(e.target.value);}} onKeyDown={function(e){if(e.key==='Enter')projOpenStart();}} placeholder="e.g. WR-4512087" style={{width:'100%',boxSizing:'border-box',padding:'7px 10px',borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.05)',color:'var(--text)',fontSize:11,fontFamily:'var(--font)',outline:'none',marginBottom:12}}/>
+          <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Your name <span style={{textTransform:'none',letterSpacing:0,fontWeight:500}}>(shown on saves)</span></div>
+          <input value={projName} onChange={function(e){setProjName(e.target.value);}} placeholder="e.g. Olivier" style={{width:'100%',boxSizing:'border-box',padding:'7px 10px',borderRadius:8,border:'1px solid var(--glass-border)',background:'rgba(255,255,255,0.05)',color:'var(--text)',fontSize:11,fontFamily:'var(--font)',outline:'none',marginBottom:12}}/>
+          {projErr&&<div style={{color:'var(--danger)',fontSize:10,marginBottom:8}}>{projErr}</div>}
+          <div style={{display:'flex',gap:6}}>
+            <button disabled={projBusy} onClick={projOpenStart} style={{flex:1,padding:'9px 0',borderRadius:9,border:'none',cursor:projBusy?'default':'pointer',fontFamily:'var(--font)',fontWeight:700,fontSize:12,color:'#fff',background:projBusy?'rgba(255,255,255,0.1)':'linear-gradient(135deg,var(--accent),var(--accent2))'}}>{projBusy?'Working\u2026':'Open / Start'}</button>
+            <button disabled={projBusy} onClick={function(){setProjModal(false);}} style={{padding:'9px 14px',borderRadius:9,border:'1px solid var(--glass-border)',cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,fontSize:12,color:'var(--muted)',background:'transparent'}}>Cancel</button>
+          </div>
+        </div>
+      </div>}
+      {/* ---- Save conflict dialog: last save wins, never silently ---- */}
+      {projConflict&&<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:3100,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{width:320,maxWidth:'92vw',background:'var(--surface)',border:'1px solid var(--glass-border)',borderRadius:14,padding:18,boxShadow:'0 18px 60px rgba(0,0,0,0.55)'}}>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>Someone saved first</div>
+          <div style={{fontSize:10.5,color:'var(--muted)',marginBottom:14,lineHeight:1.5}}>{(projConflict.by||'A teammate')+' saved '+timeAgo(projConflict.savedAt)+'. Load their version (your unsaved edits are lost) or overwrite it with yours.'}</div>
+          <div style={{display:'flex',gap:6}}>
+            <button onClick={function(){setProjConflict(null);projLoadLatest();}} style={{flex:1,padding:'9px 0',borderRadius:9,border:'1px solid var(--glass-border)',cursor:'pointer',fontFamily:'var(--font)',fontWeight:700,fontSize:11,color:'var(--text)',background:'rgba(255,255,255,0.06)'}}>Load theirs</button>
+            <button onClick={function(){projSave(true);}} style={{flex:1,padding:'9px 0',borderRadius:9,border:'none',cursor:'pointer',fontFamily:'var(--font)',fontWeight:700,fontSize:11,color:'#fff',background:'linear-gradient(135deg,var(--accent),var(--accent2))'}}>Overwrite</button>
+            <button onClick={function(){setProjConflict(null);}} style={{padding:'9px 12px',borderRadius:9,border:'1px solid var(--glass-border)',cursor:'pointer',fontFamily:'var(--font)',fontWeight:600,fontSize:11,color:'var(--muted)',background:'transparent'}}>Cancel</button>
           </div>
         </div>
       </div>}
