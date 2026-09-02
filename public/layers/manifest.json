@@ -56,6 +56,38 @@
      "dash": "8 4",
      "nameKey": "n"
     },
+    "us_tx_345": {
+     "file": "us_transmission_345.json",
+     "label": "US Transmission 345kV+",
+     "type": "line",
+     "color": "#f43f5e",
+     "weight": 2.2,
+     "nameKey": "n"
+    },
+    "us_tx_230": {
+     "file": "us_transmission_230.json",
+     "label": "US Transmission 230kV",
+     "type": "line",
+     "color": "#fb923c",
+     "weight": 1.8,
+     "nameKey": "n"
+    },
+    "us_tx_100": {
+     "file": "us_transmission_100.json",
+     "label": "US Transmission 100-161kV",
+     "type": "line",
+     "color": "#facc15",
+     "weight": 1.3,
+     "nameKey": "n"
+    },
+    "us_tx_low": {
+     "file": "us_transmission_low.json",
+     "label": "US Transmission <100kV",
+     "type": "line",
+     "color": "#94a3b8",
+     "weight": 1,
+     "nameKey": "n"
+    },
     "faa": {
      "file": "entergy_la_faa.json",
      "label": "FAA Airports",
@@ -149,6 +181,38 @@
      "color": "#c084fc",
      "weight": 2.5,
      "dash": "8 4",
+     "nameKey": "n"
+    },
+    "us_tx_345": {
+     "file": "us_transmission_345.json",
+     "label": "US Transmission 345kV+",
+     "type": "line",
+     "color": "#f43f5e",
+     "weight": 2.2,
+     "nameKey": "n"
+    },
+    "us_tx_230": {
+     "file": "us_transmission_230.json",
+     "label": "US Transmission 230kV",
+     "type": "line",
+     "color": "#fb923c",
+     "weight": 1.8,
+     "nameKey": "n"
+    },
+    "us_tx_100": {
+     "file": "us_transmission_100.json",
+     "label": "US Transmission 100-161kV",
+     "type": "line",
+     "color": "#facc15",
+     "weight": 1.3,
+     "nameKey": "n"
+    },
+    "us_tx_low": {
+     "file": "us_transmission_low.json",
+     "label": "US Transmission <100kV",
+     "type": "line",
+     "color": "#94a3b8",
+     "weight": 1,
      "nameKey": "n"
     },
     "faa": {
@@ -281,6 +345,38 @@
      "weight": 2.5,
      "dash": "8 4",
      "nameKey": "n"
+    },
+    "us_tx_345": {
+     "file": "us_transmission_345.json",
+     "label": "US Transmission 345kV+",
+     "type": "line",
+     "color": "#f43f5e",
+     "weight": 2.2,
+     "nameKey": "n"
+    },
+    "us_tx_230": {
+     "file": "us_transmission_230.json",
+     "label": "US Transmission 230kV",
+     "type": "line",
+     "color": "#fb923c",
+     "weight": 1.8,
+     "nameKey": "n"
+    },
+    "us_tx_100": {
+     "file": "us_transmission_100.json",
+     "label": "US Transmission 100-161kV",
+     "type": "line",
+     "color": "#facc15",
+     "weight": 1.3,
+     "nameKey": "n"
+    },
+    "us_tx_low": {
+     "file": "us_transmission_low.json",
+     "label": "US Transmission <100kV",
+     "type": "line",
+     "color": "#94a3b8",
+     "weight": 1,
+     "nameKey": "n"
     }
    },
    "lookup": "exel_nm_lookup.json"
@@ -358,6 +454,38 @@
      "color": "#c084fc",
      "weight": 2.5,
      "dash": "8 4",
+     "nameKey": "n"
+    },
+    "us_tx_345": {
+     "file": "us_transmission_345.json",
+     "label": "US Transmission 345kV+",
+     "type": "line",
+     "color": "#f43f5e",
+     "weight": 2.2,
+     "nameKey": "n"
+    },
+    "us_tx_230": {
+     "file": "us_transmission_230.json",
+     "label": "US Transmission 230kV",
+     "type": "line",
+     "color": "#fb923c",
+     "weight": 1.8,
+     "nameKey": "n"
+    },
+    "us_tx_100": {
+     "file": "us_transmission_100.json",
+     "label": "US Transmission 100-161kV",
+     "type": "line",
+     "color": "#facc15",
+     "weight": 1.3,
+     "nameKey": "n"
+    },
+    "us_tx_low": {
+     "file": "us_transmission_low.json",
+     "label": "US Transmission <100kV",
+     "type": "line",
+     "color": "#94a3b8",
+     "weight": 1,
      "nameKey": "n"
     }
    },
@@ -481,6 +609,38 @@
      "fill": 0,
      "weight": 2.5,
      "dash": "6 3",
+     "nameKey": "n"
+    },
+    "us_tx_345": {
+     "file": "us_transmission_345.json",
+     "label": "US Transmission 345kV+",
+     "type": "line",
+     "color": "#f43f5e",
+     "weight": 2.2,
+     "nameKey": "n"
+    },
+    "us_tx_230": {
+     "file": "us_transmission_230.json",
+     "label": "US Transmission 230kV",
+     "type": "line",
+     "color": "#fb923c",
+     "weight": 1.8,
+     "nameKey": "n"
+    },
+    "us_tx_100": {
+     "file": "us_transmission_100.json",
+     "label": "US Transmission 100-161kV",
+     "type": "line",
+     "color": "#facc15",
+     "weight": 1.3,
+     "nameKey": "n"
+    },
+    "us_tx_low": {
+     "file": "us_transmission_low.json",
+     "label": "US Transmission <100kV",
+     "type": "line",
+     "color": "#94a3b8",
+     "weight": 1,
      "nameKey": "n"
     }
    },
@@ -618,6 +778,38 @@
      "type": "line",
      "color": "#a855f7",
      "weight": 3,
+     "nameKey": "n"
+    },
+    "us_tx_345": {
+     "file": "us_transmission_345.json",
+     "label": "US Transmission 345kV+",
+     "type": "line",
+     "color": "#f43f5e",
+     "weight": 2.2,
+     "nameKey": "n"
+    },
+    "us_tx_230": {
+     "file": "us_transmission_230.json",
+     "label": "US Transmission 230kV",
+     "type": "line",
+     "color": "#fb923c",
+     "weight": 1.8,
+     "nameKey": "n"
+    },
+    "us_tx_100": {
+     "file": "us_transmission_100.json",
+     "label": "US Transmission 100-161kV",
+     "type": "line",
+     "color": "#facc15",
+     "weight": 1.3,
+     "nameKey": "n"
+    },
+    "us_tx_low": {
+     "file": "us_transmission_low.json",
+     "label": "US Transmission <100kV",
+     "type": "line",
+     "color": "#94a3b8",
+     "weight": 1,
      "nameKey": "n"
     },
     "counties": {
