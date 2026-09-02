@@ -382,10 +382,11 @@ export default function App(){
   var analyzeAll=useCallback(async function(){
     if(!pts.length||!company||!manifest)return;setBusy(true);var newRes={};
     setStatusMsg('Loading layers...');
-    var needed={};for(var i=0;i<pts.length;i++){var pc=detectCompany(pts[i].lat,pts[i].lng);var co=manifest.companies[pc];if(co){['dot','rr','transmission','levee','faa','cities','parishes','counties','row','parish_roads','orange_roads','osceola_roads','rr_crossings','blm','usfs','nps','usfws','dod','usbr'].forEach(function(lk){var dk=pc+'_'+lk;if(co.layers[lk]&&!layerData[dk]&&!needed[dk])needed[dk]={file:co.layers[lk].file};});}}
-    var nk=Object.keys(needed);if(nk.length){var lr=await Promise.all(nk.map(function(dk){return fetch('/layers/'+needed[dk].file).then(function(r){return r.json();}).then(function(d){return{dk:dk,data:d};}).catch(function(){return null;});}));lr.forEach(function(r){if(r)setLayerData(function(p){var n=Object.assign({},p);n[r.dk]=r.data;return n;});});}
+    var needed={};for(var i=0;i<pts.length;i++){var pc=detectCompany(pts[i].lat,pts[i].lng);var co=manifest.companies[pc];if(co){['dot','rr','transmission','us_tx_345','us_tx_230','us_tx_100','us_tx_low','levee','faa','cities','parishes','counties','row','parish_roads','orange_roads','osceola_roads','rr_crossings','blm','usfs','nps','usfws','dod','usbr'].forEach(function(lk){var dk=pc+'_'+lk;if(co.layers[lk]&&!layerData[dk]&&!needed[dk])needed[dk]={file:co.layers[lk].file};});}}
+    var ld=Object.assign({},layerData);
+    var nk=Object.keys(needed);if(nk.length){var lr=await Promise.all(nk.map(function(dk){return fetch('/layers/'+needed[dk].file).then(function(r){return r.json();}).then(function(d){return{dk:dk,data:d};}).catch(function(){return null;});}));lr.forEach(function(r){if(r){ld[r.dk]=r.data;setLayerData(function(p){var n=Object.assign({},p);n[r.dk]=r.data;return n;});}});}
     setStatusMsg('Spatial analysis...');
-    var local=[];for(var i=0;i<pts.length;i++){var pt=pts[i];var pc=detectCompany(pt.lat,pt.lng);var r=runFullAnalysis(pt.lat,pt.lng,layerData,pc,manifest);if(r)r.detectedCompany=pc;local.push({pt:pt,info:r});}
+    var local=[];for(var i=0;i<pts.length;i++){var pt=pts[i];var pc=detectCompany(pt.lat,pt.lng);var r=runFullAnalysis(pt.lat,pt.lng,ld,pc,manifest);if(r)r.detectedCompany=pc;local.push({pt:pt,info:r});}
     setStatusMsg('Fetching elevation & addresses...');
     var final=await Promise.all(local.map(function(lr){if(!lr.info)return Promise.resolve(lr);return Promise.all([getElevation(lr.pt.lat,lr.pt.lng),reverseGeocode(lr.pt.lat,lr.pt.lng)]).then(function(r){if(r[0])lr.info.elevation=r[0];if(r[1])lr.info.address=r[1];return lr;});}));
     final.forEach(function(lr){newRes[lr.pt.id]={info:lr.info,pm:lr.info?generatePermits(lr.info):[]};});
@@ -660,12 +661,13 @@ export default function App(){
                     {[['Coords',selPt.lat.toFixed(5)+', '+selPt.lng.toFixed(5),'var(--text)'],['State',sel.info.state||'\u2014','var(--text)'],[sel.info.state==='Louisiana'?'Parish':'County',sel.info.county||'\u2014','#4a9eff'],['City',sel.info.city||'Unincorporated','var(--success)']].concat(sel.info.dot&&sel.info.dot.length&&sel.info.dot[0].district?[['FDOT District',sel.info.dot[0].district,'var(--warn)']]:[]).concat(sel.info.row?[['ROW',sel.info.row,'#f472b6']]:[]).concat(sel.info.elevation?[['Elev',sel.info.elevation.ft.toFixed(1)+' ft','#06b6d4']]:[])
                     .map(function(r,i){return <div key={i} style={{fontSize:11,padding:'3px 0',display:'flex',justifyContent:'space-between'}}><span style={{color:'var(--muted)'}}>{r[0]}</span><span style={{fontWeight:600,fontFamily:'var(--mono)',color:r[2],fontSize:11}}>{r[1]}</span></div>;})}
                   </div>
-                  {(sel.info.dot.length>0||sel.info.rr.length>0||sel.info.transmission.length>0||sel.info.levee.length>0||sel.info.faa.length>0)&&<>
+                  {(sel.info.dot.length>0||sel.info.rr.length>0||sel.info.transmission.length>0||(sel.info.usTx||[]).length>0||sel.info.levee.length>0||sel.info.faa.length>0)&&<>
                   <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,margin:'10px 0 5px'}}>Summary</div>
                   <div style={{display:'flex',flexWrap:'wrap'}}>
                     {sel.info.dot.length>0&&<Badge label="DOT" value={sel.info.dot[0].n+' '+Math.round(sel.info.dot[0].d*3.28084)+'ft'} color="#4a9eff"/>}
                     {sel.info.rr.length>0&&<Badge label="RR" value={sel.info.rr[0].o+' '+Math.round(sel.info.rr[0].d*3.28084)+'ft'} color="var(--danger)"/>}
                     {sel.info.transmission.length>0&&<Badge label="Tx" value={Math.round(sel.info.transmission[0].d*3.28084)+'ft'} color="#a855f7"/>}
+                    {!sel.info.transmission.length&&(sel.info.usTx||[]).length>0&&<Badge label="Tx US" value={Math.round(sel.info.usTx[0].d*3.28084)+'ft'} color="#f43f5e"/>}
                     {sel.info.levee.length>0&&<Badge label="Levee" value={Math.round(sel.info.levee[0].d*3.28084)+'ft'} color="var(--warn)"/>}
                     {sel.info.faa.length>0&&<Badge label="FAA" value={(sel.info.faa[0].dist/1609.34).toFixed(1)+'mi'} color="#06b6d4"/>}
                   </div>
@@ -678,6 +680,7 @@ export default function App(){
                   <DetailBox title={sel.info.rr.length?'Railroads ('+sel.info.rr.length+')':'Railroads \u2014 Clear'} color="var(--danger)">{sel.info.rr.map(function(r,i){return <NearbyRow key={i} label={r.o} dist={r.d} dir={r.dir}/>;})}{!sel.info.rr.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
                   {sel.info.rrx&&sel.info.rrx.length>0&&<DetailBox title={'RR Crossings ('+sel.info.rrx.length+')'} color="#fb7185">{sel.info.rrx.map(function(x,i){return <NearbyRow key={i} label={x.n} dist={x.dist} dir={x.brg}/>;})}</DetailBox>}
                   <DetailBox title={sel.info.transmission.length?'Transmission ('+sel.info.transmission.length+')':'Transmission \u2014 Clear'} color="#a855f7">{sel.info.transmission.map(function(t,i){return <NearbyRow key={i} label={(t.n||'Line')+(t.v?' ('+t.v+')':'')} dist={t.d} dir={t.dir}/>;})}{!sel.info.transmission.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
+                  {(sel.info.usTx||[]).length>0&&<DetailBox title={'US Grid ('+sel.info.usTx.length+')'} color="#f43f5e">{sel.info.usTx.map(function(t,i){return <NearbyRow key={i} label={t.n||'Line'} dist={t.d} dir={t.dir}/>;})}</DetailBox>}
                   <DetailBox title={sel.info.levee.length?'Levees ('+sel.info.levee.length+')':'Levees \u2014 Clear'} color="var(--warn)">{sel.info.levee.map(function(l,i){return <NearbyRow key={i} label={l.n+(l.s?' ['+l.s+']':'')} dist={l.d} dir={l.dir}/>;})}{!sel.info.levee.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 2,625ft</div>}</DetailBox>
                   <DetailBox title={sel.info.faa.length?'Airports ('+sel.info.faa.length+')':'Airports \u2014 Clear'} color="#06b6d4">{sel.info.faa.map(function(a,i){return <NearbyRow key={i} label={a.n} dist={a.dist} dir={a.brg}/>;})}{!sel.info.faa.length&&<div style={{fontSize:11,color:'var(--muted)'}}>None within 10,000ft</div>}</DetailBox>
                   <div style={{fontSize:9,letterSpacing:1.5,textTransform:'uppercase',color:'var(--muted)',fontWeight:700,marginBottom:5}}>Status</div>
